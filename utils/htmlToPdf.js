@@ -1,20 +1,29 @@
-const puppeteer = require('puppeteer');
 const htmlToPdfBuffer = async (html) => {
-    const browser = await puppeteer.launch({
-        headless: "new", // or true, depending on version
+    if (!process.env.PDFSHIFT_API_KEY) {
+        throw new Error("PDFSHIFT_API_KEY is missing");
+    }
+
+    const response = await fetch("https://api.pdfshift.io/v3/convert/pdf", {
+        method: "POST",
+        headers: {
+            "X-API-Key": process.env.PDFSHIFT_API_KEY,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            source: html,
+            format: "A4",
+            // print_background: true,
+        }),
     });
-    const page = await browser.newPage();
 
-    await page.setContent(html, { waitUntil: "networkidle0" });
+    if (!response.ok) {
+        const error = await response.text();
+        throw new Error("PDF generation failed: " + error);
+    }
 
-    const pdfBuffer = await page.pdf({
-        format: "A4",
-        printBackground: true,
-    });
-
-    await browser.close();
-    return pdfBuffer;
-}
-module.exports = {
-    htmlToPdfBuffer,
+    // IMPORTANT: PDFShift returns PDF as binary, not JSON
+    const arrayBuffer = await response.arrayBuffer();
+    return Buffer.from(arrayBuffer);
 };
+
+module.exports = { htmlToPdfBuffer };

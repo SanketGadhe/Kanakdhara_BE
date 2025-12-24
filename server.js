@@ -1,45 +1,59 @@
 // server.js
-const express = require('express');
-const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const connectDB = require('./config/db');
-const nodemailer = require("nodemailer");
-const puppeteer = require("puppeteer");
 require("dotenv").config();
-const path = require("path");
+
+const express = require("express");
+const cors = require("cors");
+
+const connectDB = require("./config/db");
+
 const app = express();
-const staticPath = path.join(__dirname, 'public');
-app.use(cors());
-app.use(bodyParser.json());
+
+/* ======================
+   MIDDLEWARE
+====================== */
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use(
+  cors({
+    origin: [
+      "https://kanakdharainv.com",
+      "https://www.kanakdharainv.com",
+      "http://localhost:3000"
+    ],
+    credentials: true,
+  })
+);
+
+/* ======================
+   DATABASE
+====================== */
 connectDB();
 
+/* ======================
+   ROUTES
+====================== */
+app.use("/api/leads/customerInfo", require("./routes/customerInfo.routes"));
+app.use("/api/overall", require("./routes/marketData.routes"));
+app.use("/api/reports", require("./routes/report.routes"));
+app.use("/api/reports", require("./routes/goalReports.routes"));
+app.use("/api/calendar", require("./routes/calendar.routes"));
+app.use("/api", require("./routes/auth.routes"));
+app.use("/api", require("./routes/iisForm.routes"));
+app.use("/api/market", require("./routes/market.routes"));
 
-// Serve static files from the "public" directory
-app.use(express.static(staticPath));
+/* ======================
+   HEALTH CHECK
+====================== */
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "OK" });
+});
 
-app.use('/api/leads/customerInfo', require('./routes/customerInfo.routes.js'));
-app.use("/api/overall", require("./routes/marketData.routes.js"));
-app.use("/api/reports", require("./routes/report.routes.js"));
-app.use("/api/reports/", require("./routes/goalReports.routes.js"));
-app.use("/api/calendar", require("./routes/calendar.routes.js"));
-app.use("/api", require('./routes/auth.routes.js'))
-app.use("/api", require("./routes/iisForm.routes.js"))
-
+/* ======================
+   SERVER
+====================== */
 const PORT = process.env.PORT || 4000;
-const { getOwnerGoogleTokens } = require('./utils/getOwnerGoogleTokens');
-const { generateAuthUrl } = require('./utils/googleAuth');
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT} url=http://localhost:${PORT}`);
-  // On first start, if tokens are not present, print the one-time auth URL
-  const tokens = getOwnerGoogleTokens();
-  if (!tokens || !tokens.refresh_token) {
-    const url = generateAuthUrl();
-    console.log('No owner refresh token found. To authorize the owner account, open:');
-    console.log(`  Visit: http://localhost:${PORT.replace ? PORT.replace : PORT}${'/api/google'}`);
-    console.log('Or open the direct Google consent URL:');
-    console.log(`  ${url}`);
-    console.log('After consenting, Google will redirect to /api/google/callback which will save the tokens.');
-  }
+  console.log(`🚀 API running on port ${PORT}`);
 });
