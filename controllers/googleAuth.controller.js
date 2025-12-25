@@ -11,13 +11,18 @@ exports.googleAuth = (req, res) => {
 exports.googleCallback = async (req, res) => {
     try {
         const { code } = req.query;
-
         const tokens = await getTokenFromCode(code);
 
-        // Persist tokens (access_token, refresh_token, etc.)
-        await saveOwnerGoogleTokens(tokens);
+        if (!tokens.refresh_token) {
+            throw new Error('No refresh token received');
+        }
 
-        res.send('Google Calendar connected successfully ✅ - tokens saved');
+        // ✅ STORE ONLY REFRESH TOKEN
+        await saveOwnerGoogleTokens({
+            refresh_token: tokens.refresh_token,
+        });
+
+        res.send('Google connected successfully ✅');
     } catch (err) {
         console.error('googleCallback error:', err);
         res.status(500).send('Google authentication failed');

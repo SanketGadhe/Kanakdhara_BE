@@ -4,12 +4,10 @@ const { getOwnerGoogleTokens } = require('../utils/getOwnerGoogleTokens');
 const { sendMail } = require('./mailService');
 
 const getCalendarClient = async () => {
-    const { access_token, refresh_token } = await getOwnerGoogleTokens();
-    const auth = getAuthorizedClient({
-        refresh_token: refresh_token,
-    })
-    return google.calendar({ version: 'v3', auth: auth });
+    const auth = getAuthorizedClient();
+    return google.calendar({ version: 'v3', auth });
 };
+
 
 
 /**

@@ -5,25 +5,22 @@ const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_SECRET,
     process.env.GOOGLE_REDIRECT_URI
 );
-/**
- * Use stored tokens (calendar + gmail)
- */
-function getAuthorizedClient(tokens = {}) {
+
+function getAuthorizedClient() {
     const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET,
         process.env.GOOGLE_REDIRECT_URI
     );
-    if (tokens.refresh_token) {
-        oauth2Client.setCredentials({
-            access_token: tokens.access_token,
-            refresh_token: tokens.refresh_token,
-            expiry_date: tokens.expiry_date, // optional but recommended
-        });
-    }
+
+    // ✅ ONLY refresh token — NOTHING ELSE
+    oauth2Client.setCredentials({
+        refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+    });
 
     return oauth2Client;
 }
+
 
 /**
  * ONE consent for BOTH Calendar + Gmail

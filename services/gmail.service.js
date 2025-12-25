@@ -15,9 +15,7 @@ exports.sendMail = async ({
     pdfFileName = 'document.pdf',
 }) => {
     const { access_token, refresh_token } = await getOwnerGoogleTokens();
-    const auth = getAuthorizedClient({
-        refresh_token: refresh_token,
-    })
+    const auth = getAuthorizedClient();
     const gmail = google.gmail({ version: 'v1', auth });
 
     const boundary = `boundary_${Date.now()}`;
