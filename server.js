@@ -20,7 +20,6 @@ app.use(
     origin: [
       "https://kanakdharainv.com",
       "https://www.kanakdharainv.com",
-      "http://localhost:3000"
     ],
     credentials: true,
   })
