@@ -1,4 +1,5 @@
 const customerModel = require("../models/customerInfo.model");
+const { sendMail } = require("../services/gmail.service");
 
 // Controller to create a new customer
 const createCustomer = async (req, res) => {
@@ -12,9 +13,17 @@ const createCustomer = async (req, res) => {
             panCard,
         });
         const savedCustomer = await newCustomer.save();
+       
+        await sendMail(
+            {
+                to: email,
+                subject: "Thanks For Connecting",
+                htmlMessage: "Welcome to KanakDhara"
+            }
+        )
         res.status(201).json(savedCustomer);
     } catch (error) {
-        res.status(500).json({ error: "Server Error: Unable to create customer." });
+        res.status(500).json({ error: "Server Error: Unable to create customer.", detail: error });
     }
 };
 

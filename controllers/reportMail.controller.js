@@ -1,6 +1,6 @@
 const { htmlToPdfBuffer } = require("../utils/htmlToPdf.js");
 const { generateRiskProfileHtml, mailContent, generateFinancialHealthHtml } = require("../static/mailContent.js");
-const { sendMailToUser } = require("../services/mailService.js");
+const { sendMail } = require("../services/gmail.service.js");
 const customerModel = require("../models/customerInfo.model.js");
 const reportModel = require("../models/report.model.js");
 const { ref } = require("process");
@@ -8,9 +8,9 @@ const { getCustomerById } = require("./customerInfo.controllers.js");
 
 
 const getOrCreateCustomer = async (user) => {
-    console.log("USER", user)
+
     let customer = await customerModel.findOne({ email: user.email });
-    console.log("Customer", customer)
+
     if (!customer) {
         customer = await customerModel.create({
             name: user.name,
@@ -57,21 +57,17 @@ const sendRiskProfileReport = async (req, res) => {
         const pdfOfRiskProfile = await htmlToPdfBuffer(htmlContentofRiskProfile);
 
         // 4. Send mail
-        const sentMailResult = await sendMailToUser({
-            toEmail: user.email,
+        const sentMailResult = await sendMail({
+            to: user.email,
             subject: mailContent.RiskProfileMail.subject,
-            message: mailContent.RiskProfileMail.message,
-            attachments: [
-                {
-                    filename: `${user.name}_Risk_Profile.pdf`,
-                    content: pdfOfRiskProfile
-                }
-            ]
+            htmlMessage: mailContent.RiskProfileMail.message,
+            pdf: pdfOfRiskProfile,
+            pdfFileName: `${user.name}_Risk_Profile_Report.pdf`
         });
 
-        if (!sentMailResult.success) {
-            throw new Error("Failed to send email");
-        }
+        // if (!sentMailResult.success) {
+        //     throw new Error("Failed to send email");
+        // }
 
         res.status(200).json({
             success: true,
@@ -127,21 +123,17 @@ const sendFinancialHealthReport = async (req, res) => {
         const pdfOfFinancialHealth = await htmlToPdfBuffer(htmlContentofFinancialHealth);
 
         // 4. Send mail
-        const sentMailResult = await sendMailToUser({
-            toEmail: user.email,
+        const sentMailResult = await sendMail({
+            to: user.email,
             subject: mailContent.FinancialHealthMail.subject,
-            message: mailContent.FinancialHealthMail.message,
-            attachments: [
-                {
-                    filename: `${user.name}_Financial_Health_Report.pdf`,
-                    content: pdfOfFinancialHealth
-                }
-            ]
+            htmlMessage: mailContent.FinancialHealthMail.message,
+            pdf: pdfOfFinancialHealth,
+            pdfFileName: `${user.name}_Financial_Health_Report.pdf`
         });
 
-        if (!sentMailResult.success) {
-            throw new Error("Failed to send email");
-        }
+        // if (!sentMailResult.success) {
+        //     throw new Error("Failed to send email");
+        // }
 
         res.status(200).json({
             success: true,

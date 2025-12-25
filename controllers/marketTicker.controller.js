@@ -99,7 +99,8 @@ const getMarketTicker = async (req, res) => {
 
             const last = Number(i.last);
             const prev = Number(i.previousClose);
-
+            const perChange30d = Number(i.perChange30d);
+            const perChange365d = Number(i.perChange365d)
             return {
                 id: key,
                 symbol: key,

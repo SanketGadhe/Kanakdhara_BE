@@ -2,8 +2,9 @@ const {
     getBusySlots,
     bookMeeting,
 } = require('../services/googleCalendar.service');
-const { sendMailToUser } = require('../services/mailService');
+const { sendMail } = require('../services/gmail.service');
 const { buildMeetingEmail } = require('../static/mailContent');
+
 
 /**
  * GET /calendar/availability
@@ -68,15 +69,16 @@ exports.bookSlot = async (req, res) => {
             )?.uri ||
             null;
         const { Subject, Message } = buildMeetingEmail(meetLink)
-        const sentMailResult = await sendMailToUser({
-            toEmail: email,
+        const sentMailResult = await sendMail({
+            to: email,
             subject: Subject,
-            message: Message,
+            htmlMessage: Message
         });
-        const sentMailTOClient = await sendMailToUser({
-            toEmail: "connect@kanakdharainv.com",
+
+        const sentMailTOClient = await sendMail({
+            to: process.env.EMAIL_USER,
             subject: "A User From Website has Schedule the Meeting",
-            message: `
+            htmlMessage: `
             Hey Chetan,
                 A User from the website has schedule a meeting with meeting link: ${meetLink}. Pls Join the meeting on Time
                 Thanks

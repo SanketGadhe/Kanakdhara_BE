@@ -24,10 +24,8 @@ function renderGoalCalculatorReportHTML(data) {
     estimatedReturns,
     totalValue
   } = goalData || {};
-  const clientLogoUrl = "http://localhost:4000/logo.png";
-  console.log("Goal Data:", goalData);
-  console.log("Rendering report for:", customerName, clientName, monthlyInvestment, durationYears, returnRate);
-  // Donut chart numbers (server-side)
+  const clientLogoUrl = "https://kanakdharainv.com/static/logo-2.png";
+
   const radius = 100;
   const circumference = 2 * Math.PI * radius;
   const investedShare =

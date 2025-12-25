@@ -54,7 +54,6 @@ exports.getMMITrend = (req, res) => {
     // try {
     const range = req.query.range || "1Y";
     const data = getMMISeries(range);
-    console.log("Data of mmi", data)
     return res.json({
         range,
         data

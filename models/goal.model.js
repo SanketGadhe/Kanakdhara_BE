@@ -38,8 +38,9 @@ const GoalReportSchema = new Schema(
         results: {
             // mandatory
             totalCorpus: {
-                value: { type: Number, required: true },
-                label: { type: String, required: true }
+                value: { type: Number },
+                label: { type: String, required: true },
+                timeValue: { type: String }
             },
 
             // optional calculator-specific values

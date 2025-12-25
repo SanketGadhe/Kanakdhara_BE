@@ -12,7 +12,7 @@ exports.googleCallback = async (req, res) => {
     try {
         const { code } = req.query;
 
-        const { tokens } = await getTokenFromCode(code);
+        const tokens = await getTokenFromCode(code);
 
         // Persist tokens (access_token, refresh_token, etc.)
         await saveOwnerGoogleTokens(tokens);

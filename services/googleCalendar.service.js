@@ -1,12 +1,14 @@
 const { google } = require('googleapis');
 const { getAuthorizedClient } = require('../utils/googleAuth');
 const { getOwnerGoogleTokens } = require('../utils/getOwnerGoogleTokens');
-const { sendMailToUser } = require('./mailService');
+const { sendMail } = require('./mailService');
 
-const getCalendarClient = () => {
-    const tokens = getOwnerGoogleTokens();
-    const authClient = getAuthorizedClient(tokens);
-    return google.calendar({ version: 'v3', auth: authClient });
+const getCalendarClient = async () => {
+    const { access_token, refresh_token } = await getOwnerGoogleTokens();
+    const auth = getAuthorizedClient({
+        refresh_token: refresh_token,
+    })
+    return google.calendar({ version: 'v3', auth: auth });
 };
 
 
@@ -24,7 +26,6 @@ const getBusySlots = async ({ timeMin, timeMax }) => {
             items: [{ id: 'primary' }],
         },
     });
-    console.log("Freebusy Response:", response.data);
 
     return response.data.calendars.primary.busy;
 };
@@ -39,7 +40,7 @@ const bookMeeting = async ({
     end,
     clientEmail,
 }) => {
-    const calendar = getCalendarClient();
+    const calendar = await getCalendarClient();
 
     const event = {
         summary: title,

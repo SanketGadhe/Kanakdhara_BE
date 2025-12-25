@@ -8,6 +8,7 @@ const connectDB = require("./config/db");
 
 const app = express();
 
+const newsLetter = require("./routes/newsLetter.routes")
 /* ======================
    MIDDLEWARE
 ====================== */
@@ -41,6 +42,7 @@ app.use("/api/calendar", require("./routes/calendar.routes"));
 app.use("/api", require("./routes/auth.routes"));
 app.use("/api", require("./routes/iisForm.routes"));
 app.use("/api/market", require("./routes/market.routes"));
+app.use("/api/newsletter", newsLetter);
 
 /* ======================
    HEALTH CHECK

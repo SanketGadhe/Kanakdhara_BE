@@ -10,8 +10,7 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-const sendMailToUser = async ({ toEmail = email, subject, message, attachments = [] }) => {
-    console.log(`Sending email to ${toEmail} with subject "${subject}"`);
+const sendMail = async ({ toEmail = email, subject, message, attachments = [] }) => {
     try {
         await transporter.sendMail({
             from: `"Kanakdhara Reports" <${process.env.EMAIL_USER}>`,
@@ -28,5 +27,5 @@ const sendMailToUser = async ({ toEmail = email, subject, message, attachments =
     }
 };
 module.exports = {
-    sendMailToUser,
+    sendMail,
 };

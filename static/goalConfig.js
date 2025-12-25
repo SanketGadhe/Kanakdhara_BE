@@ -19,152 +19,429 @@ const formatIndianCurrency = (amount, compact = false) => {
     }).format(amount);
 };
 const GOAL_REPORT_CONFIG = {
-    'goal-retirement': {
-        id: 'goal-retirement',
-        title: 'Retirement Planning',
-        description: 'Secure your second innings with precision planning.',
-        heroImage: '/static/retirement.jpg',
+    "goal-retirement": {
+        id: "goal-retirement",
+        title: "Retirement Planning",
+        description: "Secure your second innings with precision planning.",
+        heroImage: "/static/retirement.jpg",
         subGoals: [
             {
-                id: 'comprehensive',
-                title: 'Comprehensive Retirement Plan',
-                description: 'Calculate exactly how much corpus and monthly SIP you need to maintain your lifestyle post-retirement.',
-                icon: 'ShieldCheck',
+                id: "comprehensive",
+                title: "Comprehensive Retirement Plan",
+                description:
+                    "Calculate exactly how much corpus and monthly SIP you need to maintain your lifestyle post-retirement.",
+                icon: "ShieldCheck",
                 fields: [
-                    { id: 'current_age', label: 'Current Age', type: 'years', min: 18, max: 60, step: 1, defaultValue: 30 },
-                    { id: 'retirement_age', label: 'Retirement Age', type: 'years', min: 40, max: 80, step: 1, defaultValue: 60 },
-                    { id: 'life_expectancy', label: 'Life Expectancy', type: 'years', min: 60, max: 100, step: 1, defaultValue: 85 },
-                    { id: 'current_expenses', label: 'Current Monthly Expenses', type: 'currency', min: 10000, max: 500000, step: 500, defaultValue: 50000 },
-                    { id: 'inflation_rate', label: 'Expected Inflation (%)', type: 'percentage', min: 0, max: 12, step: 0.1, defaultValue: 6 },
-                    { id: 'pre_retirement_return', label: 'Pre-Retirement Return (%)', type: 'percentage', min: 8, max: 25, step: 0.1, defaultValue: 14, disclaimer: "Indian equities (Nifty 50) have given approx. 14% returns over the last 20 years." },
-                    { id: 'post_retirement_return', label: 'Post-Retirement Return (%)', type: 'percentage', min: 8, max: 25, step: 0.1, defaultValue: 8 },
+                    {
+                        id: "current_age",
+                        label: "Current Age",
+                        type: "years",
+                        min: 18,
+                        max: 60,
+                        step: 1,
+                        defaultValue: 30,
+                    },
+                    {
+                        id: "retirement_age",
+                        label: "Retirement Age",
+                        type: "years",
+                        min: 40,
+                        max: 80,
+                        step: 1,
+                        defaultValue: 60,
+                    },
+                    {
+                        id: "life_expectancy",
+                        label: "Life Expectancy",
+                        type: "years",
+                        min: 60,
+                        max: 100,
+                        step: 1,
+                        defaultValue: 85,
+                    },
+                    {
+                        id: "current_expenses",
+                        label: "Current Monthly Expenses",
+                        type: "currency",
+                        min: 10000,
+                        max: 500000,
+                        step: 500,
+                        defaultValue: 50000,
+                    },
+                    {
+                        id: "inflation_rate",
+                        label: "Expected Inflation (%)",
+                        type: "percentage",
+                        min: 0,
+                        max: 12,
+                        step: 0.1,
+                        defaultValue: 6,
+                    },
+                    {
+                        id: "pre_retirement_return",
+                        label: "Pre-Retirement Return (%)",
+                        type: "percentage",
+                        min: 8,
+                        max: 25,
+                        step: 0.1,
+                        defaultValue: 14,
+                        disclaimer:
+                            "Indian equities (Nifty 50) have given approx. 14% returns over the last 20 years.",
+                    },
+                    {
+                        id: "post_retirement_return",
+                        label: "Post-Retirement Return (%)",
+                        type: "percentage",
+                        min: 8,
+                        max: 25,
+                        step: 0.1,
+                        defaultValue: 8,
+                    },
                 ],
                 calculate: (vals) => {
                     // 1. Years to Retirement
                     const years_to_retirement = vals.retirement_age - vals.current_age;
 
                     // 2. Monthly Expenses at Retirement (FV of current expenses)
-                    const expense_at_retirement = vals.current_expenses * Math.pow((1 + vals.inflation_rate / 100), years_to_retirement);
+                    const expense_at_retirement =
+                        vals.current_expenses *
+                        Math.pow(1 + vals.inflation_rate / 100, years_to_retirement);
 
                     // 3. Corpus Required (PV of Annuity for retirement years adjusted for inflation)
                     const retirement_years = vals.life_expectancy - vals.retirement_age;
 
                     // Real rate of return formula: (1+nominal)/(1+inflation) - 1
-                    const real_return = ((1 + vals.post_retirement_return / 100) / (1 + vals.inflation_rate / 100)) - 1;
+                    const real_return =
+                        (1 + vals.post_retirement_return / 100) /
+                        (1 + vals.inflation_rate / 100) -
+                        1;
 
                     const months_in_retirement = retirement_years * 12;
                     const monthly_real_return = real_return / 12;
 
                     // Corpus = Monthly Expense * [ (1 - (1+r)^-n) / r ]
                     // Using monthly real return for monthly drawdowns
-                    const corpus_required = expense_at_retirement * ((1 - Math.pow(1 + monthly_real_return, -months_in_retirement)) / monthly_real_return);
+                    const corpus_required =
+                        expense_at_retirement *
+                        ((1 - Math.pow(1 + monthly_real_return, -months_in_retirement)) /
+                            monthly_real_return);
 
-                    // 4. Monthly SIP Required
+                    // 4. Monthly SIP
                     // Rate for pre-retirement accumulation
                     const monthly_rate = vals.pre_retirement_return / 100 / 12;
                     const investment_months = years_to_retirement * 12;
 
                     // SIP Formula: P = FV / [ ( (1+i)^n - 1 ) / i * (1+i) ]
-                    const monthly_sip = corpus_required / (((Math.pow(1 + monthly_rate, investment_months) - 1) / monthly_rate) * (1 + monthly_rate));
+                    const monthly_sip =
+                        corpus_required /
+                        (((Math.pow(1 + monthly_rate, investment_months) - 1) /
+                            monthly_rate) *
+                            (1 + monthly_rate));
+                    function roundToTwo(num) {
+                        if (typeof num !== "number" || isNaN(num)) {
+                            throw new Error("Input must be a valid number");
+                        }
+                        return Number(num.toFixed(2)); // Convert back to number
+                    }
 
                     return {
-                        totalCorpus: Math.round(corpus_required),
+                        totalCorpus: {
+                            value: Math.round(corpus_required),
+                            label: "Total Corpus",
+                        },
                         monthlySIP: Math.round(monthly_sip),
                         breakdown: [
-                            { label: 'Years to Retire', value: `${years_to_retirement} Years` },
-                            { label: 'Monthly Expense @ Ret.', value: formatIndianCurrency(Math.round(expense_at_retirement), true), tooltip: formatIndianCurrency(Math.round(expense_at_retirement)) },
-                            { label: 'Retirement Duration', value: `${retirement_years} Years` }
-                        ]
+                            {
+                                label: "Years to Retire",
+                                value: `${years_to_retirement} Years`,
+                            },
+                            {
+                                label: "Monthly Expense @ Ret.",
+                                value: formatIndianCurrency(
+                                    Math.round(expense_at_retirement),
+                                    true
+                                ),
+                                tooltip: formatIndianCurrency(
+                                    Math.round(expense_at_retirement)
+                                ),
+                            },
+                            {
+                                label: "Retirement Duration",
+                                value: `${retirement_years} Years`,
+                            },
+                            {
+                                label: "Real Return (Post Retirement)",
+                                value: `${roundToTwo(
+                                    ((1 + vals.post_retirement_return / 100) /
+                                        (1 + vals.inflation_rate / 100) -
+                                        1) *
+                                    100
+                                )}%`,
+                            },
+                        ],
                     };
-                }
+                },
             },
             {
-                id: 'deferred-swp',
-                title: 'Deferred SWP Calculator',
-                description: 'Estimate how much income you can withdraw after allowing your investments to grow.',
-                icon: 'TrendingUp',
+                id: "deferred-swp",
+                title: "Deferred SWP Calculator",
+                description:
+                    "Estimate how much income you can withdraw after allowing your investments to grow.",
+                icon: "TrendingUp",
                 fields: [
-                    { id: 'current_corpus', label: 'Current Corpus', type: 'currency', min: 100000, max: 50000000, step: 50000, defaultValue: 5000000 },
-                    { id: 'growth_rate', label: 'Growth Rate Before SWP (%)', type: 'percentage', min: 6, max: 18, step: 0.5, defaultValue: 12 },
-                    { id: 'defer_years', label: 'Years Before SWP Starts', type: 'years', min: 1, max: 30, step: 1, defaultValue: 10 },
-                    { id: 'swp_rate', label: 'Return During SWP (%)', type: 'percentage', min: 4, max: 12, step: 0.5, defaultValue: 8 },
-                    { id: 'swp_years', label: 'SWP Duration (Years)', type: 'years', min: 5, max: 40, step: 1, defaultValue: 25 }
+                    {
+                        id: "current_corpus",
+                        label: "Current Corpus",
+                        type: "currency",
+                        min: 100000,
+                        max: 250000000,
+                        step: 50000,
+                        defaultValue: 5000000,
+                    },
+                    {
+                        id: "growth_rate",
+                        label: "Growth Rate Before SWP (%)",
+                        type: "percentage",
+                        min: 6,
+                        max: 18,
+                        step: 0.5,
+                        defaultValue: 12,
+                    },
+                    {
+                        id: "defer_years",
+                        label: "Years Before SWP Starts",
+                        type: "years",
+                        min: 1,
+                        max: 30,
+                        step: 1,
+                        defaultValue: 10,
+                    },
+                    {
+                        id: "swp_rate",
+                        label: "Return During SWP (%)",
+                        type: "percentage",
+                        min: 4,
+                        max: 12,
+                        step: 0.5,
+                        defaultValue: 8,
+                    },
+                    {
+                        id: "swp_years",
+                        label: "SWP Duration (Years)",
+                        type: "years",
+                        min: 5,
+                        max: 40,
+                        step: 1,
+                        defaultValue: 25,
+                    },
                 ],
                 calculate: (vals) => {
                     // 1. Accumulated Corpus after deferment
                     const accumulatedCorpus =
-                        vals.current_corpus * Math.pow(1 + vals.growth_rate / 100, vals.defer_years);
+                        vals.current_corpus *
+                        Math.pow(1 + vals.growth_rate / 100, vals.defer_years);
 
                     // 2. Monthly SWP calculation
                     const monthlyRate = vals.swp_rate / 100 / 12;
                     const months = vals.swp_years * 12;
 
                     const monthlySWP =
-                        accumulatedCorpus * monthlyRate /
+                        (accumulatedCorpus * monthlyRate) /
                         (1 - Math.pow(1 + monthlyRate, -months));
 
                     return {
-                        accumulatedCorpus: Math.round(accumulatedCorpus),
+                        totalCorpus: {
+                            value: Math.round(accumulatedCorpus),
+                            label: "Accumlated Corpus",
+                        },
                         monthlySWP: Math.round(monthlySWP),
                         breakdown: [
-                            { label: 'Corpus at SWP Start', value: formatIndianCurrency(Math.round(accumulatedCorpus)) },
-                            { label: 'SWP Duration', value: `${vals.swp_years} Years` },
-                            { label: 'Monthly Income', value: formatIndianCurrency(Math.round(monthlySWP), true) }
-                        ]
+                            {
+                                label: "Corpus at SWP Start",
+                                value: formatIndianCurrency(
+                                    Math.round(accumulatedCorpus),
+                                    true
+                                ),
+                                tooltip: formatIndianCurrency(Math.round(accumulatedCorpus)),
+                            },
+                            { label: "SWP Duration", value: `${vals.swp_years} Years` },
+                            {
+                                label: "Monthly Income",
+                                value: formatIndianCurrency(Math.round(monthlySWP), true),
+                                tooltip: formatIndianCurrency(Math.round(monthlySWP)),
+                            },
+                        ],
                     };
-                }
+                },
             },
             {
-                id: 'immediate-swp',
-                title: 'Immediate SWP Calculator',
-                description: 'Calculate sustainable monthly income from your existing retirement corpus.',
-                icon: 'Wallet',
+                id: "immediate-swp",
+                title: "Immediate SWP Calculator",
+                description:
+                    "Calculate sustainable monthly income from your existing retirement corpus.",
+                icon: "Wallet",
                 fields: [
-                    { id: 'accumulated_corpus', label: 'Current Retirement Corpus', type: 'currency', min: 500000, max: 100000000, step: 50000, defaultValue: 10000000 },
-                    { id: 'swp_rate', label: 'Withdrawal Rate (%)', type: 'percentage', min: 4, max: 12, step: 0.5, defaultValue: 8 },
-                    { id: 'swp_years', label: 'Withdrawal Period (Years)', type: 'years', min: 5, max: 40, step: 1, defaultValue: 25 }
+                    {
+                        id: "accumulated_corpus",
+                        label: "Current Retirement Corpus",
+                        type: "currency",
+                        min: 500000,
+                        max: 100000000,
+                        step: 50000,
+                        defaultValue: 10000000,
+                    },
+                    {
+                        id: "swp_rate",
+                        label: "Withdrawal Rate (%)",
+                        type: "percentage",
+                        min: 4,
+                        max: 12,
+                        step: 0.5,
+                        defaultValue: 8,
+                    },
+                    {
+                        id: "swp_years",
+                        label: "Withdrawal Period (Years)",
+                        type: "years",
+                        min: 5,
+                        max: 40,
+                        step: 1,
+                        defaultValue: 25,
+                    },
                 ],
                 calculate: (vals) => {
                     const monthlyRate = vals.swp_rate / 100 / 12;
                     const months = vals.swp_years * 12;
 
                     const maxSWP =
-                        vals.accumulated_corpus * monthlyRate /
+                        (vals.accumulated_corpus * monthlyRate) /
                         (1 - Math.pow(1 + monthlyRate, -months));
 
                     return {
-                        totalCorpus: vals.accumulated_corpus,
+                        totalCorpus: {
+                            value: vals.accumulated_corpus,
+                            label: "Accumalated Corpus",
+                        },
                         breakdown: [
-                            { label: 'SWP Period', value: `${vals.swp_years} Years` },
-                            { label: 'Monthly Income', value: formatIndianCurrency(Math.round(maxSWP), true) }
-                        ]
+                            { label: "SWP Period", value: `${vals.swp_years} Years` },
+                            {
+                                label: "Monthly Income",
+                                value: formatIndianCurrency(Math.round(maxSWP), true),
+                                tooltip: formatIndianCurrency(Math.round(maxSWP)),
+                            },
+                        ],
                     };
-                }
+                },
             },
             {
-                id: 'portfolio-forecast',
-                title: 'Portfolio Forecast',
-                description: 'See how your retirement portfolio grows over time across multiple assets.',
-                icon: 'PieChart',
+                id: "portfolio-forecast",
+                title: "Portfolio Forecast",
+                description:
+                    "See how your retirement portfolio grows over time across multiple assets.",
+                icon: "PieChart",
                 fields: [
-                    { id: 'equity_amount', label: 'Equity Investment', type: 'currency', min: 0, max: 50000000, step: 10000, defaultValue: 1000000 },
-                    { id: 'equity_rate', label: 'Equity Return (%)', type: 'percentage', min: 5, max: 25, step: 0.1, defaultValue: 14 },
-                    { id: 'debt_amount', label: 'Debt Investment', type: 'currency', min: 0, max: 150000, step: 5000, defaultValue: 150000 },
-                    { id: 'debt_rate', label: 'Debt Return (%)', type: 'percentage', min: 3, max: 25, step: 0.1, defaultValue: 7.1 },
-                    { id: 'real_estate', label: 'Real Estate Investment', type: 'currency', min: 0, max: 50000000, step: 10000, defaultValue: 500000 },
-                    { id: 'real_estate_rate', label: 'Real Estate Return (%)', type: 'percentage', min: 2, max: 25, step: 0.1, defaultValue: 6 },
-                    { id: 'gold_amount', label: 'Gold Investment', type: 'currency', min: 0, max: 50000000, step: 10000, defaultValue: 500000 },
-                    { id: 'gold_rate', label: 'Gold Return (%)', type: 'percentage', min: 2, max: 25, step: 0.1, defaultValue: 8 },
-                    { id: 'other_amount', label: 'Other Investment', type: 'currency', min: 0, max: 50000000, step: 10000, defaultValue: 0 },
-                    { id: 'other_rate', label: 'Other Return (%)', type: 'percentage', min: 2, max: 25, step: 0.1, defaultValue: 5 }
+                    {
+                        id: "equity_amount",
+                        label: "Equity Investment",
+                        type: "currency",
+                        min: 0,
+                        max: 50000000,
+                        step: 10000,
+                        defaultValue: 1000000,
+                    },
+                    {
+                        id: "equity_rate",
+                        label: "Equity Return (%)",
+                        type: "percentage",
+                        min: 5,
+                        max: 25,
+                        step: 0.1,
+                        defaultValue: 14,
+                        disclaimer:
+                            "Indian equities (Nifty 50) have given approx. 14% returns over the last 20 years.",
+                    },
+                    {
+                        id: "debt_amount",
+                        label: "Debt Investment",
+                        type: "currency",
+                        min: 0,
+                        max: 100000000,
+                        step: 5000,
+                        defaultValue: 150000,
+                    },
+                    {
+                        id: "debt_rate",
+                        label: "Debt Return (%)",
+                        type: "percentage",
+                        min: 3,
+                        max: 25,
+                        step: 0.1,
+                        defaultValue: 7.1,
+                    },
+                    {
+                        id: "real_estate",
+                        label: "Real Estate Investment",
+                        type: "currency",
+                        min: 0,
+                        max: 50000000,
+                        step: 10000,
+                        defaultValue: 500000,
+                    },
+                    {
+                        id: "real_estate_rate",
+                        label: "Real Estate Return (%)",
+                        type: "percentage",
+                        min: 2,
+                        max: 25,
+                        step: 0.1,
+                        defaultValue: 6,
+                    },
+                    {
+                        id: "gold_amount",
+                        label: "Gold Investment",
+                        type: "currency",
+                        min: 0,
+                        max: 50000000,
+                        step: 10000,
+                        defaultValue: 500000,
+                    },
+                    {
+                        id: "gold_rate",
+                        label: "Gold Return (%)",
+                        type: "percentage",
+                        min: 2,
+                        max: 25,
+                        step: 0.1,
+                        defaultValue: 8,
+                    },
+                    {
+                        id: "other_amount",
+                        label: "Other Investment",
+                        type: "currency",
+                        min: 0,
+                        max: 50000000,
+                        step: 10000,
+                        defaultValue: 0,
+                    },
+                    {
+                        id: "other_rate",
+                        label: "Other Return (%)",
+                        type: "percentage",
+                        min: 2,
+                        max: 25,
+                        step: 0.1,
+                        defaultValue: 5,
+                    },
                 ],
 
                 calculate: (vals) => {
                     const years = [5, 10, 15, 20, 25, 30];
 
-                    const forecast = years.map(y => {
+                    const forecast = years.map((y) => {
                         const debt =
-                            vals.debt_amount * ((Math.pow(1 + vals.debt_rate / 100, y) - 1) / (vals.debt_rate / 100));
+                            vals.debt_amount *
+                            ((Math.pow(1 + vals.debt_rate / 100, y) - 1) /
+                                (vals.debt_rate / 100));
 
                         const equityFV =
                             vals.equity_amount * Math.pow(1 + vals.equity_rate / 100, y);
@@ -183,7 +460,9 @@ const GOAL_REPORT_CONFIG = {
                             realEstate: Math.round(realEstateFV),
                             gold: Math.round(goldFV),
                             other: Math.round(otherFV),
-                            total: Math.round(debt + equityFVTotal + otherFV + goldFV + realEstateFV)
+                            total: Math.round(
+                                debt + equityFVTotal + otherFV + goldFV + realEstateFV
+                            ),
                         };
                     });
 
@@ -194,62 +473,167 @@ const GOAL_REPORT_CONFIG = {
                     // const monthlyRate = (vals.equity_rate || 0) / 100 / 12;
                     return {
                         forecast,
-                        totalCorpus: forecast[forecast.length - 1]?.total || 0,
-                        breakdown: forecast.map(f => ({
+                        totalCorpus: {
+                            value: forecast[forecast.length - 1]?.total || 0,
+                            label: "Forecast Value",
+                        },
+                        breakdown: forecast.map((f) => ({
                             label: `${f.year} Years`,
                             value: formatIndianCurrency(f.total, true),
-                            tooltip: formatIndianCurrency(f.total)
-                        }))
+                            tooltip: formatIndianCurrency(f.total),
+                        })),
                     };
-                }
-            }
-        ]
+                },
+            },
+        ],
     },
-    'goal-investment': {
-        id: 'investment-planning',
-        title: 'Investment Planning',
-        description: 'Build wealth systematically using SIPs and smart allocations.',
-        heroImage: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e',
+    "goal-investment": {
+        id: "investment-planning",
+        title: "Investment Planning",
+        description:
+            "Build wealth systematically using SIPs and smart allocations.",
+        heroImage: "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e",
         subGoals: [
             {
-                id: 'sip-lumpsum',
-                title: 'SIP + Lumpsum Projection',
-                description: 'Project future value of SIP and Lumpsum investments.',
-                icon: 'TrendingUp',
+                id: "sip-lumpsum",
+                title: "SIP + Lumpsum Projection",
+                description: "Project future value of SIP and Lumpsum investments.",
+                icon: "TrendingUp",
                 fields: [
-                    { id: 'sip', label: 'Monthly SIP', type: 'currency', min: 1000, max: 500000, step: 500, defaultValue: 10000 },
-                    { id: 'lumpsum', label: 'Lumpsum Investment', type: 'currency', min: 0, max: 50000000, step: 10000, defaultValue: 500000 },
-                    { id: 'years', label: 'Duration (Years)', type: 'years', min: 1, max: 40, step: 1, defaultValue: 15 },
-                    { id: 'rate', label: 'Expected Return (%)', type: 'percentage', min: 8, max: 20, step: 0.5, defaultValue: 14 }
+                    {
+                        id: "sip",
+                        label: "Monthly SIP",
+                        type: "currency",
+                        min: 0,
+                        max: 1000000,
+                        step: 500,
+                        defaultValue: 10000,
+                    },
+                    {
+                        id: "lumpsum",
+                        label: "Lumpsum Investment",
+                        type: "currency",
+                        min: 0,
+                        max: 50000000,
+                        step: 10000,
+                        defaultValue: 500000,
+                    },
+                    {
+                        id: "years",
+                        label: "Duration (Years)",
+                        type: "years",
+                        min: 1,
+                        max: 50,
+                        step: 1,
+                        defaultValue: 15,
+                    },
+                    {
+                        id: "rate",
+                        label: "Expected Return (%)",
+                        type: "percentage",
+                        min: 0,
+                        max: 25,
+                        step: 0.1,
+                        defaultValue: 14,
+                        disclaimer:
+                            "Indian equities (Nifty 50) have given approx. 14% returns over the last 20 years.",
+                    },
                 ],
                 calculate: (v) => {
                     const r = v.rate / 100 / 12;
                     const n = v.years * 12;
 
                     const sipFV = v.sip * ((Math.pow(1 + r, n) - 1) / r) * (1 + r);
-                    const lumpFV = v.lumpsum * Math.pow(1 + r, n);
-
+                    const lumpFV = v.lumpsum * Math.pow(1 + v.rate / 100, v.years);
+                    const totlGain = Math.round(
+                        sipFV + lumpFV - (v.sip * 12 * v.years + v.lumpsum)
+                    );
                     return {
-                        totalCorpus: Math.round(sipFV + lumpFV),
+                        totalCorpus: {
+                            value: Math.round(sipFV + lumpFV),
+                            label: "Total Corpus",
+                        },
                         monthlySIP: v.sip,
                         breakdown: [
-                            { label: 'SIP Value', value: formatIndianCurrency(Math.round(sipFV), true) },
-                            { label: 'Lumpsum Value', value: formatIndianCurrency(Math.round(lumpFV), true) }
-                        ]
+                            {
+                                label: "SIP Value",
+                                value: formatIndianCurrency(Math.round(sipFV), true),
+                            },
+                            {
+                                label: "Lumpsum Value",
+                                value: formatIndianCurrency(Math.round(lumpFV), true),
+                            },
+                            {
+                                label: "Total Investment Value",
+                                value: formatIndianCurrency(
+                                    Math.round(v.sip * 12 * v.years) + Math.round(v.lumpsum),
+                                    true
+                                ),
+                                tooltip: formatIndianCurrency(
+                                    Math.round(v.sip * 12 * v.years) + Math.round(v.lumpsum)
+                                ),
+                            },
+                            {
+                                label: "Total Gain",
+                                value: formatIndianCurrency(totlGain, true),
+                            },
+                        ],
                     };
-                }
+                },
             },
             {
-                id: 'stepup-sip',
-                title: 'Step-Up SIP Planner',
-                description: 'SIP with annual top-up in absolute ₹ terms plus Lumpsum.',
-                icon: 'ArrowUp',
+                id: "stepup-sip",
+                title: "Step-Up SIP Planner",
+                description: "SIP with annual top-up in absolute ₹ terms plus Lumpsum.",
+                icon: "ArrowUp",
                 fields: [
-                    { id: 'sip_start', label: 'Starting SIP', type: 'currency', min: 1000, max: 200000, step: 500, defaultValue: 10000 },
-                    { id: 'lumpsum', label: 'Lumpsum Investment', type: 'currency', min: 0, max: 50000000, step: 10000, defaultValue: 500000 },
-                    { id: 'stepup', label: 'Annual Step-Up (%)', type: 'percentage', min: 0, max: 100, step: 1, defaultValue: 10 },
-                    { id: 'years', label: 'Duration', type: 'years', min: 1, max: 40, step: 1, defaultValue: 20 },
-                    { id: 'rate', label: 'Expected Return (%)', type: 'percentage', min: 8, max: 18, step: 0.5, defaultValue: 14 }
+                    {
+                        id: "sip_start",
+                        label: "Starting SIP",
+                        type: "currency",
+                        min: 1000,
+                        max: 200000,
+                        step: 500,
+                        defaultValue: 10000,
+                    },
+                    {
+                        id: "lumpsum",
+                        label: "Lumpsum Investment",
+                        type: "currency",
+                        min: 0,
+                        max: 50000000,
+                        step: 10000,
+                        defaultValue: 500000,
+                    },
+                    {
+                        id: "stepup",
+                        label: "Annual Step-Up (%)",
+                        type: "percentage",
+                        min: 0,
+                        max: 100,
+                        step: 1,
+                        defaultValue: 10,
+                    },
+                    {
+                        id: "years",
+                        label: "Duration",
+                        type: "years",
+                        min: 1,
+                        max: 40,
+                        step: 1,
+                        defaultValue: 20,
+                    },
+                    {
+                        id: "rate",
+                        label: "Expected Return (%)",
+                        type: "percentage",
+                        min: 8,
+                        max: 18,
+                        step: 0.5,
+                        defaultValue: 14,
+                        disclaimer:
+                            "Indian equities (Nifty 50) have given approx. 14% returns over the last 20 years.",
+                    },
                 ],
                 calculate: (v) => {
                     const r = v.rate / 100 / 12;
@@ -260,199 +644,370 @@ const GOAL_REPORT_CONFIG = {
                     let totalSipInvested = 0;
 
                     for (let y = 1; y <= v.years; y++) {
-                        const sipAmount = v.sip_start + (y - 1) * (v.stepup / 100) * v.sip_start;
+                        const sipAmount = v.sip_start * Math.pow(1 + v.stepup / 100, y - 1);
                         totalSipInvested += sipAmount * 12;
 
-                        const monthsLeft = (v.years - y + 1) * 12;
+                        const monthsLeft = (v.years - y) * 12;
 
                         const fvYear =
                             sipAmount *
                             ((Math.pow(1 + r, 12) - 1) / r) *
-                            Math.pow(1 + r, monthsLeft - 12);
+                            Math.pow(1 + r, monthsLeft);
 
                         sipFV += fvYear;
                     }
 
                     /* -------- LUMPSUM FV -------- */
                     const lumpsumFV =
-                        v.lumpsum > 0
-                            ? v.lumpsum * Math.pow(1 + r, totalMonths)
-                            : 0;
+                        v.lumpsum > 0 ? v.lumpsum * Math.pow(1 + r, totalMonths) : 0;
 
                     /* -------- TOTAL CORPUS -------- */
                     const totalCorpus = sipFV + lumpsumFV;
-
+                    const totalLumsumFV = v.sip_start * totalMonths + v.lumpsum;
                     return {
-                        totalCorpus: Math.round(totalCorpus),
+                        totalCorpus: {
+                            value: Math.round(totalCorpus),
+                            label: "Total Corpus",
+                        },
                         breakdown: [
                             {
-                                label: 'Total SIP Invested',
+                                label: "Total SIP Invested",
                                 value: formatIndianCurrency(Math.round(totalSipInvested), true),
-                                tooltip: formatIndianCurrency(Math.round(totalSipInvested))
+                                tooltip: formatIndianCurrency(Math.round(totalSipInvested)),
                             },
                             {
-                                label: 'SIP Value',
+                                label: "SIP Value",
                                 value: formatIndianCurrency(Math.round(sipFV), true),
-                                tooltip: formatIndianCurrency(Math.round(sipFV))
+                                tooltip: formatIndianCurrency(Math.round(sipFV)),
                             },
                             {
-                                label: 'Lumpsum Value',
+                                label: "Lumpsum Future Value",
                                 value: formatIndianCurrency(Math.round(lumpsumFV), true),
-                                tooltip: formatIndianCurrency(Math.round(lumpsumFV))
-                            }
-                        ]
+                                tooltip: formatIndianCurrency(Math.round(lumpsumFV)),
+                            },
+                            {
+                                label: "Total Gains",
+                                value: formatIndianCurrency(
+                                    Math.round(totalCorpus - (totalSipInvested + v.lumpsum)),
+                                    true
+                                ),
+                                tooltip: `Calculated on total SIP invested over ${v.years} years.`,
+                            },
+                        ],
                     };
-                }
+                },
             },
             {
-                id: 'crorepati',
-                title: 'Crorepati Calculator',
-                description: 'Know how long it takes to reach your first crore.',
-                icon: 'Crown',
+                id: "crorepati",
+                title: "Crorepati Calculator",
+                description: "Know how long it takes to reach your first crore.",
+                icon: "Crown",
                 fields: [
-                    { id: 'sip', label: 'Monthly SIP', type: 'currency', min: 5000, max: 500000, step: 500, defaultValue: 15000 },
-                    { id: 'target', label: 'Target (₹ Crores)', type: 'number', min: 1, max: 10, step: 1, defaultValue: 1 },
-                    { id: 'rate', label: 'Expected Return (%)', type: 'percentage', min: 8, max: 18, step: 0.5, defaultValue: 14 }
+                    {
+                        id: "sip",
+                        label: "Monthly SIP",
+                        type: "currency",
+                        min: 1000,
+                        max: 500000,
+                        step: 500,
+                        defaultValue: 15000,
+                    },
+                    {
+                        id: "target",
+                        label: "Target (₹ Crores)",
+                        type: "number",
+                        min: 1,
+                        max: 25,
+                        step: 1,
+                        defaultValue: 1,
+                    },
+                    {
+                        id: "years",
+                        label: "Duration (Years)",
+                        type: "years",
+                        min: 1,
+                        max: 40,
+                        step: 1,
+                        defaultValue: 20,
+                    },
+                    {
+                        id: "rate",
+                        label: "Expected Return (%)",
+                        type: "percentage",
+                        min: 8,
+                        max: 25,
+                        step: 0.1,
+                        defaultValue: 14,
+                        disclaimer:
+                            "Indian equities (Nifty 50) have given approx. 14% returns over the last 20 years.",
+                    },
                 ],
                 calculate: (v) => {
-                    const target = v.target * 10000000;
-                    const r = v.rate / 100 / 12;
-                    let corpus = 0;
-                    let months = 0;
+                    const monthlyRate = v.rate / 100 / 12;
+                    const sip = v.sip;
+                    const targetAmount = v.target * 1_00_00_000; // crores → rupees
 
-                    while (corpus < target && months < 1000) {
-                        corpus = corpus * (1 + r) + v.sip;
+                    let months = 0;
+                    let corpus = 0;
+
+                    // Iterative compounding (accurate + intuitive)
+                    while (corpus < targetAmount && months < 1000) {
+                        corpus = corpus * (1 + monthlyRate) + sip;
                         months++;
                     }
 
+                    const years = Math.floor(months / 12);
+                    const remainingMonths = months % 12;
+
                     return {
-                        totalCorpus: Math.round(corpus),
-                        monthlySIP: v.sip,
+                        totalCorpus: {
+                            label: "Time Required",
+                            currency: false,
+                            timeValue: `${years} years ${remainingMonths} months`,
+                        },
                         breakdown: [
-                            { label: 'Time Required', value: `${Math.floor(months / 12)} Years ${months % 12} Months` }
-                        ]
+                            { label: "Total Months", value: months },
+                            {
+                                label: "Total Investment Value",
+                                value: formatIndianCurrency(
+                                    Math.round(v.sip * 12 * v.years),
+                                    true
+                                ),
+                            },
+                            {
+                                label: "Total Gain",
+                                value: formatIndianCurrency(
+                                    Math.round(targetAmount - v.sip * 12 * v.years),
+                                    true
+                                ),
+                            },
+                        ],
                     };
-                }
+                },
             },
             {
-                id: 'lumpsum-cagr',
-                title: 'Lumpsum CAGR Calculator',
-                description: 'Calculate CAGR for a one-time investment.',
-                icon: 'Percent',
+                id: "emi-vs-sip",
+                title: "EMI vs SIP Calculator",
+                description:
+                    "Compare wealth creation via SIP against traditional EMI route.",
+                icon: "Repeat",
                 fields: [
                     {
-                        id: 'invested',
-                        label: 'Investment Amount',
-                        type: 'currency',
-                        min: 10000,
-                        defaultValue: 500000
+                        id: "loan_amount",
+                        label: "Loan Amount",
+                        type: "currency",
+                        min: 100000,
+                        max: 50000000,
+                        step: 10000,
+                        defaultValue: 1000000,
                     },
                     {
-                        id: 'years',
-                        label: 'Investment Period (Years)',
-                        type: 'years',
+                        id: "loan_rate",
+                        label: "Loan Interest Rate (%)",
+                        type: "percentage",
+                        min: 6,
+                        max: 15,
+                        step: 0.1,
+                        defaultValue: 9,
+                    },
+                    {
+                        id: "loan_tenure",
+                        label: "Loan Tenure (Years)",
+                        type: "years",
                         min: 1,
-                        defaultValue: 5
+                        max: 30,
+                        step: 1,
+                        defaultValue: 15,
                     },
                     {
-                        id: 'current',
-                        label: 'Current Value',
-                        type: 'currency',
-                        min: 10000,
-                        defaultValue: 850000
-                    }
+                        id: "sip_amount",
+                        label: "Monthly SIP Amount",
+                        type: "currency",
+                        min: 0,
+                        max: 500000,
+                        step: 100,
+                        defaultValue: 0,
+                    },
+                    {
+                        id: "sip_rate",
+                        label: "SIP Expected Return (%)",
+                        type: "percentage",
+                        min: 4,
+                        max: 25,
+                        step: 0.1,
+                        defaultValue: 14,
+                        disclaimer:
+                            "Indian equities (Nifty 50) have given approx. 14% returns over the last 20 years.",
+                    },
                 ],
-
                 calculate: (v) => {
-                    /* ---------- Build Cash Flows ---------- */
-                    const startDate = new Date(0); // epoch
-                    const endDate = new Date(v.years * 365 * 24 * 60 * 60 * 1000);
+                    const loanMonthlyRate = v.loan_rate / 100 / 12;
+                    const loanMonths = v.loan_tenure * 12;
 
-                    const cashFlows = [
-                        { date: startDate, amount: -v.invested },
-                        { date: endDate, amount: v.current }
-                    ];
-
-                    /* ---------- XNPV ---------- */
-                    const xnpv = (rate) => {
-                        const t0 = cashFlows[0].date.getTime();
-                        return cashFlows.reduce((sum, cf) => {
-                            const days =
-                                (cf.date.getTime() - t0) / (1000 * 60 * 60 * 24);
-                            return sum + cf.amount / Math.pow(1 + rate, days / 365);
-                        }, 0);
-                    };
-
-                    /* ---------- dXNPV ---------- */
-                    const dxnpv = (rate) => {
-                        const t0 = cashFlows[0].date.getTime();
-                        return cashFlows.reduce((sum, cf) => {
-                            const days =
-                                (cf.date.getTime() - t0) / (1000 * 60 * 60 * 24);
-                            const exp = days / 365;
-                            return sum - (exp * cf.amount) / Math.pow(1 + rate, exp + 1);
-                        }, 0);
-                    };
-
-                    /* ---------- Newton–Raphson ---------- */
-                    let rate = 0.1; // 10% initial guess
-                    const precision = 1e-7;
-                    const maxIter = 100;
-
-                    for (let i = 0; i < maxIter; i++) {
-                        const npv = xnpv(rate);
-                        const dnpv = dxnpv(rate);
-
-                        if (Math.abs(dnpv) < 1e-10) break;
-
-                        const newRate = rate - npv / dnpv;
-
-                        if (Math.abs(newRate - rate) < precision) {
-                            rate = newRate;
-                            break;
-                        }
-
-                        rate = newRate;
+                    // EMI Formula: EMI = (r * P) / (1 - (1+r)^-n)
+                    let emi;
+                    if (loanMonthlyRate === 0) {
+                        emi = v.loan_amount / loanMonths;
+                    } else {
+                        emi =
+                            (loanMonthlyRate * v.loan_amount) /
+                            (1 - Math.pow(1 + loanMonthlyRate, -loanMonths));
                     }
+                    const totalEmiPaid = emi * loanMonths;
+                    const totalInterestPaid = totalEmiPaid - v.loan_amount;
 
+                    // SIP Future Value
+                    const sipMonthlyRate = v.sip_rate / 100 / 12;
+                    const sipFV =
+                        v.sip_amount *
+                        ((Math.pow(1 + sipMonthlyRate, loanMonths) - 1) / sipMonthlyRate);
                     return {
-                        totalCorpus: Math.round(rate * 10000) / 100 // CAGR %
+                        totalCorpus: {
+                            value: Math.round(totalEmiPaid / loanMonths),
+                            label: "Monthly EMI",
+                        },
+                        breakdown: [
+                            {
+                                label: "Total EMI Paid",
+                                value: formatIndianCurrency(Math.round(totalEmiPaid), true),
+                            },
+                            {
+                                label: "Total Interest Paid",
+                                value: formatIndianCurrency(
+                                    Math.round(totalInterestPaid),
+                                    true
+                                ),
+                            },
+                            {
+                                label: "Total Principal Paid",
+                                value: formatIndianCurrency(Math.round(v.loan_amount), true),
+                            },
+                            {
+                                label: "SIP Value",
+                                value: formatIndianCurrency(Math.round(sipFV), true),
+                            },
+                            {
+                                label: "SIP Invested",
+                                value: formatIndianCurrency(
+                                    Math.round(v.sip_amount * loanMonths),
+                                    true
+                                ),
+                            },
+                            {
+                                label: "Net Gain from Investment",
+                                value: formatIndianCurrency(
+                                    Math.round(sipFV - v.sip_amount * loanMonths),
+                                    true
+                                ),
+                            },
+                        ],
                     };
-                }
-            }
-        ]
+                },
+            },
+        ],
     },
 
-    'goal-insurance': {
-        id: 'insurance-planning',
-        title: 'Insurance Planning',
-        description: 'Protect your family against financial uncertainty.',
-        heroImage: 'https://images.unsplash.com/photo-1605902711622-cfb43c44367f',
+    "goal-insurance": {
+        id: "insurance-planning",
+        title: "Insurance Planning",
+        description: "Protect your family against financial uncertainty.",
+        heroImage: "https://images.unsplash.com/photo-1605902711622-cfb43c44367f",
         subGoals: [
-
             /* ======================================================
                OPTION 1 — EXPENSE BASED INSURANCE REQUIREMENT
                ====================================================== */
             {
-                id: 'expense-based-hlv',
-                title: 'Expense-Based Life Insurance',
-                description: 'Goal-based insurance requirement using household expenses.',
-                icon: 'Shield',
+                id: "expense-based-hlv",
+                title: "Expense-Based Life Insurance",
+                description:
+                    "Goal-based insurance requirement using household expenses.",
+                icon: "Shield",
                 fields: [
-                    { id: 'age', label: 'Current Age', type: 'years', min: 18, max: 65, step: 1, defaultValue: 35 },
-                    { id: 'dependency_years', label: 'Years Dependents Need Support', type: 'years', min: 1, max: 40, step: 1, defaultValue: 25 },
+                    {
+                        id: "dependency_years",
+                        label: "Years Dependents Need Support",
+                        type: "years",
+                        min: 1,
+                        max: 50,
+                        step: 1,
+                        defaultValue: 25,
+                    },
 
-                    { id: 'monthly_expense', label: 'Monthly Household Expense', type: 'currency', min: 10000, max: 300000, step: 5000, defaultValue: 60000 },
-                    { id: 'expense_inflation', label: 'Expense Inflation (%)', type: 'percentage', min: 3, max: 8, step: 0.5, defaultValue: 6 },
+                    {
+                        id: "monthly_expense",
+                        label: "Monthly Household Expense",
+                        type: "currency",
+                        min: 10000,
+                        max: 500000,
+                        step: 5000,
+                        defaultValue: 60000,
+                    },
+                    {
+                        id: "expense_inflation",
+                        label: "Expense Inflation (%)",
+                        type: "percentage",
+                        min: 3,
+                        max: 10,
+                        step: 0.1,
+                        defaultValue: 6,
+                    },
 
-                    { id: 'return_rate', label: 'Expected Return on Corpus (%)', type: 'percentage', min: 4, max: 10, step: 0.5, defaultValue: 6 },
+                    {
+                        id: "return_rate",
+                        label: "Expected Return on Corpus (%)",
+                        type: "percentage",
+                        min: 4,
+                        max: 25,
+                        step: 0.1,
+                        defaultValue: 6,
+                    },
 
-                    { id: 'goal_lumpsum', label: 'Future Family Goals (Optional)', type: 'currency', min: 0, max: 50000000, step: 100000, defaultValue: 0 },
-                    { id: 'goal_years', label: 'Years to Goal', type: 'years', min: 0, max: 25, step: 1, defaultValue: 0 },
+                    {
+                        id: "goal_lumpsum",
+                        label: "Future Family Goals (Optional)",
+                        type: "currency",
+                        min: 0,
+                        max: 50000000,
+                        step: 100000,
+                        defaultValue: 0,
+                    },
+                    {
+                        id: "goal_years",
+                        label: "Years to Goal",
+                        type: "years",
+                        min: 0,
+                        max: 25,
+                        step: 1,
+                        defaultValue: 0,
+                    },
 
-                    { id: 'existing_cover', label: 'Existing Life Cover', type: 'currency', min: 0, max: 50000000, step: 500000, defaultValue: 5000000 },
-                    { id: 'existing_assets', label: 'Existing Liquid Assets', type: 'currency', min: 0, max: 50000000, step: 500000, defaultValue: 2000000 },
-                    { id: 'liabilities', label: 'Outstanding Liabilities', type: 'currency', min: 0, max: 50000000, step: 500000, defaultValue: 10000000 }
+                    {
+                        id: "existing_cover",
+                        label: "Existing Life Cover",
+                        type: "currency",
+                        min: 0,
+                        max: 50000000,
+                        step: 500000,
+                        defaultValue: 0,
+                    },
+                    {
+                        id: "existing_assets",
+                        label: "Existing Liquid Assets",
+                        type: "currency",
+                        min: 0,
+                        max: 50000000,
+                        step: 500000,
+                        defaultValue: 0,
+                    },
+                    {
+                        id: "liabilities",
+                        label: "Outstanding Liabilities",
+                        type: "currency",
+                        min: 0,
+                        max: 50000000,
+                        step: 500000,
+                        defaultValue: 0,
+                    },
                 ],
 
                 calculate: (v) => {
@@ -463,67 +1018,154 @@ const GOAL_REPORT_CONFIG = {
                     /* ---- Present Value of Inflation-adjusted Expenses ---- */
                     let pvExpenses = 0;
                     for (let t = 1; t <= Y; t++) {
-                        const annualExpense =
-                            v.monthly_expense * 12 * Math.pow(1 + I, t);
+                        const annualExpense = v.monthly_expense * 12 * Math.pow(1 + I, t);
                         pvExpenses += annualExpense / Math.pow(1 + R, t);
                     }
 
                     /* ---- Lumpsum Goals (Optional) ---- */
                     let pvGoals = 0;
                     if (v.goal_lumpsum > 0 && v.goal_years > 0) {
-                        const fvGoal =
-                            v.goal_lumpsum * Math.pow(1 + I, v.goal_years);
+                        const fvGoal = v.goal_lumpsum * Math.pow(1 + I, v.goal_years);
                         pvGoals = fvGoal / Math.pow(1 + R, v.goal_years);
                     }
 
                     /* ---- Total Insurance Required ---- */
                     const insuranceRequired =
-                        pvExpenses +
-                        pvGoals +
-                        v.liabilities -
-                        v.existing_assets;
+                        pvExpenses + pvGoals + v.liabilities - v.existing_assets;
 
-                    const gap =
-                        insuranceRequired - v.existing_cover;
+                    const gap = insuranceRequired - v.existing_cover;
 
                     return {
-                        totalCorpus: Math.round(insuranceRequired),
+                        totalCorpus: {
+                            value: Math.round(insuranceRequired),
+                            label: "Insurance Required",
+                        },
                         breakdown: [
-                            { label: 'Expense Corpus', value: formatIndianCurrency(Math.round(pvExpenses)) },
-                            { label: 'Goals Corpus', value: formatIndianCurrency(Math.round(pvGoals)) },
-                            { label: "Existing Cover", value: formatIndianCurrency(v.existing_cover) },
-                            { label: "Additional Cover Required", value: formatIndianCurrency(Math.max(0, Math.round(gap))) }
+                            {
+                                label: "Expense Corpus",
+                                value: formatIndianCurrency(Math.round(pvExpenses), true),
+                                tooltip: formatIndianCurrency(Math.round(pvExpenses)),
+                            },
+                            {
+                                label: "Goals Corpus",
+                                value: formatIndianCurrency(Math.round(pvGoals), true),
+                                tooltip: formatIndianCurrency(Math.round(pvGoals)),
+                            },
+                            {
+                                label: "Existing Cover",
+                                value: formatIndianCurrency(v.existing_cover, true),
+                                tooltip: formatIndianCurrency(v.existing_cover),
+                            },
+                            {
+                                label: "Additional Cover Required",
+                                value: formatIndianCurrency(Math.max(0, Math.round(gap)), true),
+                                tooltip: formatIndianCurrency(
+                                    Math.max(0, Math.round(gap)),
+                                    true
+                                ),
+                            },
                         ],
                     };
-                }
+                },
             },
 
             /* ======================================================
                OPTION 2 — INCOME BASED HLV (CLASSICAL MODEL)
                ====================================================== */
             {
-                id: 'income-based-hlv',
-                title: 'Income-Based Life Insurance (HLV)',
-                description: 'Classical Human Life Value model for income earners.',
-                icon: 'TrendingUp',
+                id: "income-based-hlv",
+                title: "Income-Based Life Insurance (HLV)",
+                description: "Classical Human Life Value model for income earners.",
+                icon: "TrendingUp",
                 fields: [
-                    { id: 'current_age', label: 'Current Age', type: 'years', min: 18, max: 60, step: 1, defaultValue: 35 },
-                    { id: 'retirement_age', label: 'Retirement Age', type: 'years', min: 45, max: 70, step: 1, defaultValue: 60 },
+                    {
+                        id: "current_age",
+                        label: "Current Age",
+                        type: "years",
+                        min: 18,
+                        max: 60,
+                        step: 1,
+                        defaultValue: 35,
+                    },
+                    {
+                        id: "retirement_age",
+                        label: "Retirement Age",
+                        type: "years",
+                        min: 45,
+                        max: 90,
+                        step: 1,
+                        defaultValue: 60,
+                    },
 
-                    { id: 'annual_income', label: 'Annual Income', type: 'currency', min: 200000, max: 50000000, step: 100000, defaultValue: 1800000 },
-                    { id: 'family_contribution', label: 'Income Contributed to Family (%)', type: 'percentage', min: 40, max: 100, step: 5, defaultValue: 70 },
+                    {
+                        id: "annual_income",
+                        label: "Annual Income",
+                        type: "currency",
+                        min: 200000,
+                        max: 50000000,
+                        step: 100000,
+                        defaultValue: 1800000,
+                    },
+                    {
+                        id: "family_contribution",
+                        label: "Income Contributed to Family (%)",
+                        type: "percentage",
+                        min: 0,
+                        max: 100,
+                        step: 5,
+                        defaultValue: 100,
+                    },
 
-                    { id: 'income_growth', label: 'Income Growth (%)', type: 'percentage', min: 0, max: 10, step: 0.5, defaultValue: 5 },
-                    { id: 'discount_rate', label: 'Expected Return / Discount Rate (%)', type: 'percentage', min: 4, max: 10, step: 0.5, defaultValue: 6 },
+                    {
+                        id: "income_growth",
+                        label: "Income Growth (%)",
+                        type: "percentage",
+                        min: 0,
+                        max: 50,
+                        step: 0.1,
+                        defaultValue: 5,
+                    },
+                    {
+                        id: "discount_rate",
+                        label: "Expected Return / Discount Rate (%)",
+                        type: "percentage",
+                        min: 4,
+                        max: 25,
+                        step: 0.1,
+                        defaultValue: 6,
+                    },
 
-                    { id: 'existing_cover', label: 'Existing Life Cover', type: 'currency', min: 0, max: 50000000, step: 500000, defaultValue: 5000000 },
-                    { id: 'existing_assets', label: 'Existing Assets', type: 'currency', min: 0, max: 50000000, step: 500000, defaultValue: 3000000 },
-                    { id: 'liabilities', label: 'Outstanding Liabilities', type: 'currency', min: 0, max: 50000000, step: 500000, defaultValue: 12000000 }
+                    {
+                        id: "existing_cover",
+                        label: "Existing Life Cover",
+                        type: "currency",
+                        min: 0,
+                        max: 50000000,
+                        step: 500000,
+                        defaultValue: 0,
+                    },
+                    {
+                        id: "existing_assets",
+                        label: "Existing Assets",
+                        type: "currency",
+                        min: 0,
+                        max: 50000000,
+                        step: 500000,
+                        defaultValue: 0,
+                    },
+                    {
+                        id: "liabilities",
+                        label: "Outstanding Liabilities",
+                        type: "currency",
+                        min: 0,
+                        max: 50000000,
+                        step: 500000,
+                        defaultValue: 0,
+                    },
                 ],
 
                 calculate: (v) => {
-                    const years =
-                        v.retirement_age - v.current_age;
+                    const years = v.retirement_age - v.current_age;
                     const G = v.income_growth / 100;
                     const R = v.discount_rate / 100;
                     const C = v.family_contribution / 100;
@@ -531,249 +1173,876 @@ const GOAL_REPORT_CONFIG = {
                     let pvIncome = 0;
 
                     for (let t = 1; t <= years; t++) {
-                        const income =
-                            v.annual_income * Math.pow(1 + G, t);
+                        const income = v.annual_income * Math.pow(1 + G, t);
                         const familyIncome = income * C;
                         pvIncome += familyIncome / Math.pow(1 + R, t);
                     }
 
                     const insuranceRequired =
-                        pvIncome +
-                        v.liabilities -
-                        v.existing_assets;
+                        pvIncome + v.liabilities - v.existing_assets;
 
-                    const gap =
-                        insuranceRequired - v.existing_cover;
+                    const gap = insuranceRequired - v.existing_cover;
 
                     return {
-                        totalCorpus: Math.round(insuranceRequired),
+                        totalCorpus: {
+                            value: Math.round(insuranceRequired),
+                            label: "Net Insurance Required",
+                        },
                         breakdown: [
-                            { label: 'Human Life Value', value: formatIndianCurrency(Math.round(pvIncome)) },
-                            { label: 'Existing Cover', value: formatIndianCurrency(v.existing_cover) },
-                            { label: 'Additional Cover Required', value: formatIndianCurrency(Math.max(0, Math.round(gap))) }
+                            {
+                                label: "Human Life Value",
+                                value: formatIndianCurrency(Math.round(pvIncome), true),
+                                tooltip: formatIndianCurrency(Math.round(pvIncome)),
+                            },
+                            {
+                                label: "Existing Cover",
+                                value: formatIndianCurrency(v.existing_cover, true),
+                                tooltip: formatIndianCurrency(v.existing_cover),
+                            },
+                            {
+                                label: "Additional Cover Required",
+                                value: formatIndianCurrency(Math.max(0, Math.round(gap)), true),
+                                tooltip: formatIndianCurrency(Math.max(0, Math.round(gap))),
+                            },
+                            {
+                                label: "Net Asset (Total Assets- Total Liabilities)",
+                                value: formatIndianCurrency(
+                                    v.existing_assets - v.liabilities,
+                                    true
+                                ),
+                                tooltip: formatIndianCurrency(
+                                    v.existing_assets - v.liabilities
+                                ),
+                            },
                         ],
                     };
-                }
-            }
-        ]
+                },
+            },
+        ],
     },
 
-    'goal-travel': {
-        id: 'dream-travel',
-        title: 'Dream Travel Planning',
-        description: 'Plan your dream vacation stress-free.',
-        heroImage: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee',
+    "goal-travel": {
+        id: "dream-travel",
+        title: "Dream Travel Planning",
+        description: "Plan your dream vacation stress-free.",
+        heroImage: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee",
         subGoals: [
-
             {
-                id: 'travel-sip',
-                title: 'Travel SIP Planner',
-                description: 'Monthly SIP for your dream travel.',
-                icon: 'Plane',
+                id: "travel-sip",
+                title: "Travel SIP Planner",
+                description: "Monthly SIP for your dream travel.",
+                icon: "Plane",
                 fields: [
-                    { id: 'budget', label: 'Travel Budget', type: 'currency', min: 100000, max: 10000000, step: 50000, defaultValue: 500000 },
-                    { id: 'years', label: 'Time Horizon', type: 'years', min: 1, max: 10, step: 1, defaultValue: 3 },
-                    { id: 'rate', label: 'Expected Return (%)', type: 'percentage', min: 6, max: 14, step: 0.5, defaultValue: 10 }
+                    {
+                        id: "budget",
+                        label: "Travel Budget",
+                        type: "currency",
+                        min: 100000,
+                        max: 10000000,
+                        step: 50000,
+                        defaultValue: 500000,
+                    },
+                    {
+                        id: "years",
+                        label: "Time Horizon",
+                        type: "years",
+                        min: 1,
+                        max: 10,
+                        step: 1,
+                        defaultValue: 3,
+                    },
+                    {
+                        id: "rate",
+                        label: "Expected Return (%)",
+                        type: "percentage",
+                        min: 6,
+                        max: 14,
+                        step: 0.5,
+                        defaultValue: 10,
+                    },
+                    {
+                        id: "inflation",
+                        label: "Inflation Rate (%)",
+                        type: "percentage",
+                        min: 0,
+                        max: 10,
+                        step: 0.5,
+                        defaultValue: 5,
+                    },
+                    {
+                        id: "existing_savings",
+                        label: "Existing Savings",
+                        type: "currency",
+                        min: 0,
+                        max: 5000000,
+                        step: 10000,
+                        defaultValue: 0,
+                    },
                 ],
                 calculate: (v) => {
-                    const r = v.rate / 100 / 12;
-                    const n = v.years * 12;
-                    const sip = v.budget / (((Math.pow(1 + r, n) - 1) / r) * (1 + r));
-                    return { monthlySIP: Math.round(sip) };
-                }
-            }
-        ]
+                    const currentCost = Number(v.budget || 0);
+                    const years = Number(v.years || 0);
+                    const travelInflation = Number(v.inflation || 0);
+                    const expectedReturn = Number(v.rate || 0);
+                    const existingSavings = Number(v.existing_savings || 0);
+
+                    // Step 1: Inflate current cost to future value using travel inflation
+                    const inflatedCost =
+                        currentCost * Math.pow(1 + travelInflation / 100, years);
+
+                    // Step 2: Future value of existing savings at expected return
+                    const existingSavingsFV =
+                        existingSavings * Math.pow(1 + expectedReturn / 100, years);
+
+                    // Net target after accounting for existing savings FV
+                    const netTarget = Math.max(inflatedCost - existingSavingsFV, 0);
+
+                    // SIP calculation
+                    const monthlyRate = expectedReturn / 100 / 12;
+                    const months = Math.max(1, years * 12);
+
+                    let monthlySIP = 0;
+                    if (monthlyRate === 0) {
+                        monthlySIP = netTarget / months;
+                    } else {
+                        monthlySIP =
+                            (netTarget * monthlyRate) /
+                            (Math.pow(1 + monthlyRate, months) - 1);
+                    }
+
+                    // Lumpsum required today (discount net target back by expected return)
+                    const lumpsumRequiredToday =
+                        netTarget / Math.pow(1 + expectedReturn / 100, years);
+
+                    return {
+                        totalCorpus: {
+                            value: Math.round(monthlySIP),
+                            label: "Mothly Sip Required",
+                        },
+                        breakdown: [
+                            {
+                                label: "Inflated Vacation Cost",
+                                value: formatIndianCurrency(Math.round(inflatedCost), true),
+                                tooltip: formatIndianCurrency(Math.round(inflatedCost)),
+                            },
+                            {
+                                label: "Existing Savings Future Value",
+                                value: formatIndianCurrency(
+                                    Math.round(existingSavingsFV),
+                                    true
+                                ),
+                                tooltip: formatIndianCurrency(Math.round(existingSavingsFV)),
+                            },
+                            {
+                                label: "Net Target Amount",
+                                value: formatIndianCurrency(Math.round(netTarget), true),
+                                tooltip: formatIndianCurrency(Math.round(netTarget)),
+                            },
+                            {
+                                label: "Lumpsum Required Today",
+                                value: formatIndianCurrency(
+                                    Math.round(lumpsumRequiredToday),
+                                    true
+                                ),
+                                tooltip: formatIndianCurrency(Math.round(lumpsumRequiredToday)),
+                            },
+                        ],
+                    };
+                },
+            },
+        ],
     },
     /* ===================== OTHER LIFE GOALS ===================== */
-    'goal-others': {
-        id: 'other-goals',
-        title: 'Other Life Goals',
-        description: 'Plan important financial milestones across life stages.',
-        heroImage: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1',
+    "goal-others": {
+        id: "other-goals",
+        title: "Other Life Goals",
+        description: "Plan important financial milestones across life stages.",
+        heroImage: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1",
         subGoals: [
-
             /* ================= CHILD EDUCATION ================= */
             {
-                id: 'child-education',
-                title: 'Child Education Planning',
-                description: 'Plan higher education expenses with inflation adjustment.',
-                icon: 'GraduationCap',
+                id: "child-education",
+                title: "Child Education Planning",
+                description:
+                    "Plan higher education expenses with inflation adjustment.",
+                icon: "GraduationCap",
                 fields: [
-                    { id: 'cost_today', label: 'Education Cost Today', type: 'currency', min: 0, max: 100000000, step: 100000, defaultValue: 3000000 },
-                    { id: 'inflation', label: 'Education Inflation (%)', type: 'percentage', min: 0, max: 12, step: 0.1, defaultValue: 6 },
-                    { id: 'years', label: 'Years to Goal', type: 'years', min: 1, max: 30, step: 1, defaultValue: 15 },
-                    { id: 'rate', label: 'Expected Return (%)', type: 'percentage', min: 5, max: 25, step: 0.1, defaultValue: 12 }
+                    {
+                        id: "cost_today",
+                        label: "Education Cost Today",
+                        type: "currency",
+                        min: 0,
+                        max: 100000000,
+                        step: 100000,
+                        defaultValue: 3000000,
+                    },
+                    {
+                        id: "inflation",
+                        label: "Education Inflation (%)",
+                        type: "percentage",
+                        min: 0,
+                        max: 12,
+                        step: 0.1,
+                        defaultValue: 6,
+                    },
+                    {
+                        id: "years",
+                        label: "Years to Goal",
+                        type: "years",
+                        min: 1,
+                        max: 30,
+                        step: 1,
+                        defaultValue: 15,
+                    },
+                    {
+                        id: "rate",
+                        label: "Expected Return (%)",
+                        type: "percentage",
+                        min: 5,
+                        max: 25,
+                        step: 0.1,
+                        defaultValue: 12,
+                    },
                 ],
                 calculate: (v) => {
                     const fv = v.cost_today * Math.pow(1 + v.inflation / 100, v.years);
                     const r = v.rate / 100 / 12;
                     const n = v.years * 12;
 
-                    const sip = fv * r / (Math.pow(1 + r, n) - 1);
+                    const sip = (fv * r) / (Math.pow(1 + r, n) - 1);
                     const lumpsum = fv / Math.pow(1 + v.rate / 100, v.years);
 
                     return {
-                        totalCorpus: Math.round(fv),
+                        totalCorpus: { value: Math.round(fv), label: "Future Value" },
                         monthlySIP: Math.round(sip),
-                        lumpsumRequired: Math.round(lumpsum)
+                        lumpsumRequired: Math.round(lumpsum),
                     };
-                }
+                },
             },
 
             /* ================= CHILD MARRIAGE ================= */
             {
-                id: 'child-marriage',
-                title: 'Marriage Planning',
-                description: 'Prepare financially for marriage expenses with inflation.',
-                icon: 'Heart',
+                id: "child-marriage",
+                title: "Marriage Planning",
+                description:
+                    "Prepare financially for marriage expenses with inflation.",
+                icon: "Heart",
                 fields: [
-                    { id: 'cost_today', label: 'Marriage Cost Today', type: 'currency', min: 500000, max: 50000000, step: 100000, defaultValue: 2000000 },
-                    { id: 'inflation', label: 'Marriage Inflation (%)', type: 'percentage', min: 0, max: 12, step: 0.1, defaultValue: 6 },
-                    { id: 'years', label: 'Years to Goal', type: 'years', min: 1, max: 25, step: 1, defaultValue: 18 },
-                    { id: 'rate', label: 'Expected Return (%)', type: 'percentage', min: 5, max: 25, step: 0.5, defaultValue: 11 }
+                    {
+                        id: "cost_today",
+                        label: "Marriage Cost Today",
+                        type: "currency",
+                        min: 500000,
+                        max: 50000000,
+                        step: 100000,
+                        defaultValue: 2000000,
+                    },
+                    {
+                        id: "inflation",
+                        label: "Marriage Inflation (%)",
+                        type: "percentage",
+                        min: 0,
+                        max: 12,
+                        step: 0.1,
+                        defaultValue: 6,
+                    },
+                    {
+                        id: "years",
+                        label: "Years to Goal",
+                        type: "years",
+                        min: 1,
+                        max: 25,
+                        step: 1,
+                        defaultValue: 18,
+                    },
+                    {
+                        id: "rate",
+                        label: "Expected Return (%)",
+                        type: "percentage",
+                        min: 5,
+                        max: 25,
+                        step: 0.5,
+                        defaultValue: 11,
+                    },
                 ],
                 calculate: (v) => {
                     const fv = v.cost_today * Math.pow(1 + v.inflation / 100, v.years);
                     const r = v.rate / 100 / 12;
                     const n = v.years * 12;
 
-                    const sip = fv * r / (Math.pow(1 + r, n) - 1);
+                    const sip = (fv * r) / (Math.pow(1 + r, n) - 1);
                     const lumpsum = fv / Math.pow(1 + v.rate / 100, v.years);
 
                     return {
-                        totalCorpus: Math.round(fv),
+                        totalCorpus: { value: Math.round(fv), label: "Future Value" },
                         monthlySIP: Math.round(sip),
-                        lumpsumRequired: Math.round(lumpsum)
+                        lumpsumRequired: Math.round(lumpsum),
                     };
-                }
+                },
             },
 
             /* ================= EMERGENCY FUND ================= */
             {
-                id: 'emergency-fund',
-                title: 'Emergency Fund Planning',
-                description: 'Build a liquid emergency buffer (no market risk).',
-                icon: 'AlertTriangle',
+                id: "emergency-fund",
+                title: "Emergency Fund Planning",
+                description: "Build a liquid emergency buffer (no market risk).",
+                icon: "AlertTriangle",
                 fields: [
-                    { id: 'monthly_expense', label: 'Monthly Expense', type: 'currency', min: 10000, max: 5000000, step: 5000, defaultValue: 50000 },
-                    { id: 'months', label: 'Emergency Coverage (Months)', type: 'number', min: 3, max: 36, step: 1, defaultValue: 6 },
-                    { id: "optionalSpending", label: "Optional Spending (%)", type: "percentage", min: 0, max: 50, step: 0.1, defaultValue: 10 }
+                    {
+                        id: "monthly_expense",
+                        label: "Monthly Expense",
+                        type: "currency",
+                        min: 10000,
+                        max: 5000000,
+                        step: 5000,
+                        defaultValue: 50000,
+                    },
+                    {
+                        id: "months",
+                        label: "Emergency Coverage (Months)",
+                        type: "number",
+                        min: 3,
+                        max: 36,
+                        step: 1,
+                        defaultValue: 6,
+                    },
+                    {
+                        id: "optionalSpending",
+                        label: "Optional Spending (%)",
+                        type: "percentage",
+                        min: 0,
+                        max: 50,
+                        step: 0.1,
+                        defaultValue: 10,
+                    },
                 ],
                 calculate: (v) => {
-                    const corpus = v.monthly_expense * v.months * (1 - v.optionalSpending / 100);
+                    const corpus =
+                        v.monthly_expense * v.months * (1 - v.optionalSpending / 100);
                     return {
-                        totalCorpus: Math.round(corpus)
+                        totalCorpus: { value: Math.round(corpus), label: "Total Corpus" },
                     };
-                }
+                },
             },
 
             /* ================= HOME PURCHASE ================= */
             {
-                id: 'home-purchase',
-                title: 'Home Purchase Planning',
-                description: 'Plan down payment for your dream home.',
-                icon: 'Home',
+                id: "home-purchase",
+                title: "Home Purchase Planning",
+                description: "Plan down payment for your dream home.",
+                icon: "Home",
                 fields: [
-                    { id: 'down_payment', label: 'Down Payment Required', type: 'currency', min: 500000, max: 50000000, step: 100000, defaultValue: 2500000 },
-                    { id: 'years', label: 'Years to Buy', type: 'years', min: 1, max: 25, step: 1, defaultValue: 5 },
-                    { id: 'rate', label: 'Expected Return (%)', type: 'percentage', min: 5, max: 25, step: 0.1, defaultValue: 10 }
+                    {
+                        id: "current_value",
+                        label: "Current Property Value",
+                        type: "currency",
+                        min: 500000,
+                        max: 50000000,
+                        step: 100000,
+                        defaultValue: 2500000,
+                    },
+                    {
+                        id: "property_appreciation",
+                        label: "Property Appreciation (%)",
+                        type: "percentage",
+                        min: 0,
+                        max: 15,
+                        step: 0.1,
+                        defaultValue: 5,
+                    },
+                    {
+                        id: "years",
+                        label: "Years to Buy",
+                        type: "years",
+                        min: 1,
+                        max: 25,
+                        step: 1,
+                        defaultValue: 5,
+                    },
+                    {
+                        id: "down_payment",
+                        label: "Down Payment (%)",
+                        type: "percentage",
+                        min: 10,
+                        max: 100,
+                        step: 1,
+                        defaultValue: 50,
+                    },
+                    {
+                        id: "home_loan_rate",
+                        label: "Home Loan Rate (%)",
+                        type: "percentage",
+                        min: 6,
+                        max: 12,
+                        step: 0.1,
+                        defaultValue: 8,
+                    },
+                    {
+                        id: "tenure_years",
+                        label: "Loan Tenure (Years)",
+                        type: "years",
+                        min: 5,
+                        max: 30,
+                        step: 1,
+                        defaultValue: 20,
+                    },
+                    {
+                        id: "existing_savings",
+                        label: "Existing Savings for Down Payment",
+                        type: "currency",
+                        min: 0,
+                        max: 50000000,
+                        step: 10000,
+                        defaultValue: 0,
+                    },
+                    {
+                        id: "investment_rate",
+                        label: "Investment Return Rate (%)",
+                        type: "percentage",
+                        min: 5,
+                        max: 25,
+                        step: 0.1,
+                        defaultValue: 10,
+                    },
                 ],
                 calculate: (v) => {
-                    const r = v.rate / 100 / 12;
-                    const n = v.years * 12;
+                    // 1️⃣ Future property value
+                    const futurePropertyValue =
+                        v.current_value *
+                        Math.pow(1 + v.property_appreciation / 100, v.years);
 
-                    const sip = v.down_payment * r / (Math.pow(1 + r, n) - 1);
-                    const lumpsum = v.down_payment / Math.pow(1 + v.rate / 100, v.years);
+                    // 2️⃣ Down payment
+                    const downPaymentAmount =
+                        futurePropertyValue * (v.down_payment / 100);
+
+                    // 3️⃣ SIP for down payment
+                    const sipMonthlyRate = v.investment_rate / 100 / 12;
+                    const sipMonths = v.years * 12;
+
+                    let sipDownPayment = 0;
+                    if (sipMonthlyRate === 0) {
+                        sipDownPayment = downPaymentAmount / sipMonths;
+                    } else {
+                        sipDownPayment =
+                            (downPaymentAmount * sipMonthlyRate) /
+                            (Math.pow(1 + sipMonthlyRate, sipMonths) - 1);
+                    }
+
+                    // 4️⃣ Loan calculations
+                    const loanAmount = futurePropertyValue - downPaymentAmount;
+
+                    const loanMonthlyRate = v.home_loan_rate / 100 / 12;
+                    const loanMonths = v.tenure_years * 12;
+
+                    // Correct EMI formula
+                    const emi =
+                        (loanAmount *
+                            loanMonthlyRate *
+                            Math.pow(1 + loanMonthlyRate, loanMonths)) /
+                        (Math.pow(1 + loanMonthlyRate, loanMonths) - 1);
+
+                    const totalPayment = emi * loanMonths;
+                    const totalInterest = totalPayment - loanAmount;
 
                     return {
-                        monthlySIP: Math.round(sip),
-                        lumpsumRequired: Math.round(lumpsum),
-                        totalCorpus: v.down_payment
+                        totalCorpus: { value: Math.round(emi), label: "Monthly EMI" },
+                        breakdown: [
+                            {
+                                label: "Future Property Value",
+                                value: formatIndianCurrency(
+                                    Math.round(futurePropertyValue),
+                                    true
+                                ),
+                                tooltip: formatIndianCurrency(Math.round(futurePropertyValue)),
+                            },
+                            {
+                                label: "Down Payment Required",
+                                value: formatIndianCurrency(
+                                    Math.round(downPaymentAmount),
+                                    true
+                                ),
+                                tooltip: formatIndianCurrency(Math.round(downPaymentAmount)),
+                            },
+                            {
+                                label: "Monthly SIP for Down Payment",
+                                value: formatIndianCurrency(Math.round(sipDownPayment), true),
+                                tooltip: formatIndianCurrency(Math.round(sipDownPayment)),
+                            },
+                            {
+                                label: "Loan Amount",
+                                value: formatIndianCurrency(Math.round(loanAmount), true),
+                                tooltip: formatIndianCurrency(Math.round(loanAmount)),
+                            },
+                            {
+                                label: "Total Loan Payment",
+                                value: formatIndianCurrency(Math.round(totalPayment), true),
+                                tooltip: formatIndianCurrency(Math.round(totalPayment)),
+                            },
+                            {
+                                label: "Total Interest Payable",
+                                value: formatIndianCurrency(Math.round(totalInterest), true),
+                                tooltip: formatIndianCurrency(Math.round(totalInterest)),
+                            },
+                        ],
                     };
-                }
+                },
             },
 
             /* ================= CAR PURCHASE ================= */
             {
-                id: 'car-purchase',
-                title: 'Car Purchase Planning',
-                description: 'Save smartly for your next car.',
-                icon: 'Car',
+                id: "car-purchase",
+                title: "Car Purchase Planning",
+                description:
+                    "Understand the real cost of your dream car and fund it smartly.",
+                icon: "Car",
                 fields: [
-                    { id: 'car_cost', label: 'Car Cost', type: 'currency', min: 100000, max: 50000000, step: 50000, defaultValue: 1000000 },
-                    { id: 'years', label: 'Years to Buy', type: 'years', min: 1, max: 25, step: 1, defaultValue: 3 },
-                    { id: 'rate', label: 'Expected Return (%)', type: 'percentage', min: 5, max: 25, step: 0.1, defaultValue: 9 }
-                ],
-                calculate: (v) => {
-                    const r = v.rate / 100 / 12;
-                    const n = v.years * 12;
+                    {
+                        id: "currentCarPrice",
+                        label: "Current Car Price",
+                        type: "currency",
+                        min: 100000,
+                        max: 50000000,
+                        step: 50000,
+                        defaultValue: 1500000,
+                    },
 
-                    const sip = v.car_cost * r / (Math.pow(1 + r, n) - 1);
-                    const lumpsum = v.car_cost / Math.pow(1 + v.rate / 100, v.years);
+                    {
+                        id: "carInflation",
+                        label: "Car Price Inflation (%)",
+                        type: "percentage",
+                        min: 0,
+                        max: 15,
+                        step: 0.1,
+                        defaultValue: 6,
+                    },
+
+                    {
+                        id: "yearsToPurchase",
+                        label: "Years to Purchase",
+                        type: "years",
+                        min: 1,
+                        max: 10,
+                        step: 1,
+                        defaultValue: 3,
+                    },
+
+                    {
+                        id: "downPaymentPercent",
+                        label: "Down Payment (%)",
+                        type: "percentage",
+                        min: 10,
+                        max: 100,
+                        step: 1,
+                        defaultValue: 50,
+                    },
+
+                    {
+                        id: "existingSavings",
+                        label: "Existing Savings",
+                        type: "currency",
+                        min: 0,
+                        max: 50000000,
+                        step: 10000,
+                        defaultValue: 0,
+                    },
+
+                    {
+                        id: "investmentReturn",
+                        label: "Investment Return (%)",
+                        type: "percentage",
+                        min: 5,
+                        max: 25,
+                        step: 0.1,
+                        defaultValue: 8,
+                    },
+
+                    {
+                        id: "carLoanInterest",
+                        label: "Car Loan Interest (%)",
+                        type: "percentage",
+                        min: 6,
+                        max: 25,
+                        step: 0.1,
+                        defaultValue: 9.5,
+                    },
+
+                    {
+                        id: "loanTenureYears",
+                        label: "Loan Tenure (Years)",
+                        type: "years",
+                        min: 1,
+                        max: 10,
+                        step: 1,
+                        defaultValue: 5,
+                    },
+                ],
+
+                calculate: (v) => {
+                    /* 1️⃣ Future car price */
+                    const futureCarPrice =
+                        v.currentCarPrice *
+                        Math.pow(1 + v.carInflation / 100, v.yearsToPurchase);
+
+                    /* 2️⃣ Down payment */
+                    const downPayment = (futureCarPrice * v.downPaymentPercent) / 100;
+
+                    /* 3️⃣ Existing savings future value */
+                    const existingSavingsFV =
+                        v.existingSavings *
+                        Math.pow(1 + v.investmentReturn / 100, v.yearsToPurchase);
+
+                    const netDownPaymentRequired = Math.max(
+                        downPayment - existingSavingsFV,
+                        0
+                    );
+
+                    /* 4️⃣ SIP for down payment */
+                    const sipRate = v.investmentReturn / 100 / 12;
+                    const sipMonths = v.yearsToPurchase * 12;
+
+                    let sipAmount = 0;
+                    if (sipRate === 0) {
+                        sipAmount = netDownPaymentRequired / sipMonths;
+                    } else {
+                        sipAmount =
+                            (netDownPaymentRequired * sipRate) /
+                            (Math.pow(1 + sipRate, sipMonths) - 1);
+                    }
+
+                    /* 5️⃣ Loan & EMI */
+                    const loanAmount = futureCarPrice - downPayment;
+                    const loanRate = v.carLoanInterest / 100 / 12;
+                    const loanMonths = v.loanTenureYears * 12;
+
+                    const emi =
+                        (loanAmount * loanRate * Math.pow(1 + loanRate, loanMonths)) /
+                        (Math.pow(1 + loanRate, loanMonths) - 1);
+
+                    const totalLoanPayment = emi * loanMonths;
+                    const totalLoanInterest = totalLoanPayment - loanAmount;
 
                     return {
-                        monthlySIP: Math.round(sip),
-                        lumpsumRequired: Math.round(lumpsum),
-                        totalCorpus: v.car_cost
+                        totalCorpus: { value: Math.round(emi), label: "Monthly EMI" },
+                        breakdown: [
+                            {
+                                label: "Future Car Price",
+                                value: formatIndianCurrency(Math.round(futureCarPrice), true),
+                                tooltip: formatIndianCurrency(Math.round(futureCarPrice)),
+                            },
+                            {
+                                label: "Down Payment Required",
+                                value: formatIndianCurrency(Math.round(downPayment), true),
+                                tooltip: formatIndianCurrency(Math.round(downPayment)),
+                            },
+                            {
+                                label: "Existing Savings (Future Value)",
+                                value: formatIndianCurrency(Math.round(existingSavingsFV)),
+                                tooltip: formatIndianCurrency(
+                                    Math.round(existingSavingsFV),
+                                    true
+                                ),
+                            },
+                            {
+                                label: "Monthly SIP for Down Payment",
+                                value: formatIndianCurrency(Math.round(sipAmount), true),
+                                tooltip: formatIndianCurrency(Math.round(sipAmount)),
+                            },
+                            {
+                                label: "Loan Amount",
+                                value: formatIndianCurrency(Math.round(loanAmount)),
+                                tooltip: formatIndianCurrency(Math.round(loanAmount), true),
+                            },
+                            {
+                                label: "Total Interest on Loan",
+                                value: formatIndianCurrency(
+                                    Math.round(totalLoanInterest),
+                                    true
+                                ),
+                                tooltip: formatIndianCurrency(Math.round(totalLoanInterest)),
+                            },
+                        ],
                     };
-                }
+                },
             },
-
             /* ================= WEALTH CREATION ================= */
             {
-                id: 'wealth-creation',
-                title: 'Wealth Creation Goal',
-                description: 'Long-term disciplined wealth accumulation.',
-                icon: 'TrendingUp',
+                id: "wealth-creation",
+                title: "Wealth Creation Goal",
+                description: "Mathematically solved long-term wealth planning.",
+                icon: "TrendingUp",
                 fields: [
-                    { id: 'target', label: 'Target Amount', type: 'currency', min: 1000000, max: 100000000, step: 500000, defaultValue: 50000000 },
-                    { id: 'years', label: 'Time Horizon', type: 'years', min: 5, max: 40, step: 1, defaultValue: 20 },
-                    { id: 'rate', label: 'Expected Return (%)', type: 'percentage', min: 5, max: 25, step: 0.1, defaultValue: 14 }
+                    {
+                        id: "targetAmount",
+                        label: "Target Amount (Today’s Value)",
+                        type: "currency",
+                        min: 1000000,
+                        max: 1000000000,
+                        step: 500000,
+                        defaultValue: 50000000,
+                    },
+                    {
+                        id: "years",
+                        label: "Time Horizon (Years)",
+                        type: "years",
+                        min: 5,
+                        max: 40,
+                        step: 1,
+                        defaultValue: 20,
+                    },
+                    {
+                        id: "expectedReturn",
+                        label: "Expected Return (%)",
+                        type: "percentage",
+                        min: 5,
+                        max: 20,
+                        step: 0.1,
+                        defaultValue: 12,
+                    },
+                    {
+                        id: "inflation",
+                        label: "Inflation (%)",
+                        type: "percentage",
+                        min: 0,
+                        max: 10,
+                        step: 0.1,
+                        defaultValue: 6,
+                    },
+                    {
+                        id: "lumpsum",
+                        label: "Existing Investment (₹)",
+                        type: "currency",
+                        min: 0,
+                        max: 100000000,
+                        step: 100000,
+                        defaultValue: 500000,
+                    },
+                    {
+                        id: "stepUpPercent",
+                        label: "Annual SIP Step-Up (%)",
+                        type: "percentage",
+                        min: 0,
+                        max: 20,
+                        step: 1,
+                        defaultValue: 10,
+                    },
                 ],
-                calculate: (v) => {
-                    const r = v.rate / 100 / 12;
-                    const n = v.years * 12;
 
-                    const sip = v.target * r / (Math.pow(1 + r, n) - 1);
-                    const lumpsum = v.target / Math.pow(1 + v.rate / 100, v.years);
+                calculate: (v) => {
+                    function adjustTargetForInflation(target, inflation, years) {
+                        if (!inflation || inflation === 0) return target;
+                        return target * Math.pow(1 + inflation / 100, years);
+                    }
+
+                    function futureValueLumpsum(lumpsum, years, annualReturn) {
+                        return lumpsum * Math.pow(1 + annualReturn / 100, years);
+                    }
+
+                    function stepUpSIPFutureValue(
+                        startingSIP,
+                        stepUp,
+                        years,
+                        annualReturn
+                    ) {
+                        const r = annualReturn / 100 / 12;
+                        let totalFV = 0;
+
+                        for (let year = 1; year <= years; year++) {
+                            const sip = startingSIP * Math.pow(1 + stepUp / 100, year - 1);
+
+                            const fvYear =
+                                sip *
+                                ((Math.pow(1 + r, 12) - 1) / r) *
+                                Math.pow(1 + r, (years - year) * 12);
+
+                            totalFV += fvYear;
+                        }
+
+                        return totalFV;
+                    }
+                    function solveRequiredSIP({
+                        targetAmount,
+                        years,
+                        expectedReturn,
+                        stepUpPercent,
+                        lumpsum = 0,
+                        inflation = 0,
+                    }) {
+                        const nominalTarget = adjustTargetForInflation(
+                            targetAmount,
+                            inflation,
+                            years
+                        );
+
+                        const lumpsumFV = futureValueLumpsum(
+                            lumpsum,
+                            years,
+                            expectedReturn
+                        );
+
+                        const netTarget = Math.max(nominalTarget - lumpsumFV, 0);
+
+                        let sip = 1000;
+                        let fv = 0;
+
+                        while (sip < 10_00_000) {
+                            // sanity cap
+                            fv = stepUpSIPFutureValue(
+                                sip,
+                                stepUpPercent,
+                                years,
+                                expectedReturn
+                            );
+
+                            if (fv >= netTarget) break;
+                            sip += 100;
+                        }
+
+                        return {
+                            requiredMonthlySIP: sip,
+                            targetNominal: Math.round(nominalTarget),
+                            lumpsumFutureValue: Math.round(lumpsumFV),
+                            netTargetRequired: Math.round(netTarget),
+                        };
+                    }
+
+                    const result = solveRequiredSIP({
+                        targetAmount: v.targetAmount,
+                        years: v.years,
+                        expectedReturn: v.expectedReturn,
+                        inflation: v.inflation,
+                        lumpsum: v.lumpsum,
+                        stepUpPercent: v.stepUpPercent,
+                    });
 
                     return {
-                        monthlySIP: Math.round(sip),
-                        lumpsumRequired: Math.round(lumpsum),
-                        totalCorpus: v.target
+                        totalCorpus: {
+                            value: result.requiredMonthlySIP,
+                            label: "Monthly SIP Required",
+                        },
+                        breakdown: [
+                            {
+                                label: "Inflation Adjusted Target",
+                                value: formatIndianCurrency(result.targetNominal, true),
+                                tooltip: formatIndianCurrency(result.targetNominal),
+                            },
+                            {
+                                label: "Existing Investment (Future Value)",
+                                value: formatIndianCurrency(result.lumpsumFutureValue, true),
+                                tooltip: formatIndianCurrency(result.lumpsumFutureValue),
+                            },
+                            {
+                                label: "Net Target to be Built",
+                                value: formatIndianCurrency(result.netTargetRequired, true),
+                                tooltip: formatIndianCurrency(result.netTargetRequired),
+                            },
+                        ],
                     };
-                }
+                },
             },
-
-            /* ================= LEGACY GOAL ================= */
-            {
-                id: 'legacy-goal',
-                title: 'Legacy / Estate Goal',
-                description: 'Create wealth for the next generation.',
-                icon: 'ShieldCheck',
-                fields: [
-                    { id: 'target', label: 'Legacy Amount', type: 'currency', min: 10000000, max: 500000000, step: 1000000, defaultValue: 100000000 },
-                    { id: 'years', label: 'Years to Build', type: 'years', min: 10, max: 40, step: 1, defaultValue: 25 },
-                    { id: 'rate', label: 'Expected Return (%)', type: 'percentage', min: 5, max: 25, step: 0.1, defaultValue: 13 }
-                ],
-                calculate: (v) => {
-                    const r = v.rate / 100 / 12;
-                    const n = v.years * 12;
-
-                    const sip = v.target * r / (Math.pow(1 + r, n) - 1);
-                    const lumpsum = v.target / Math.pow(1 + v.rate / 100, v.years);
-
-                    return {
-                        monthlySIP: Math.round(sip),
-                        lumpsumRequired: Math.round(lumpsum),
-                        totalCorpus: v.target
-                    };
-                }
-            }
-        ]
-    }
-
+        ],
+    },
 };
+
 function goalContextHtml(payload, goalConfig, subGoalConfig) {
     const { user, meta } = payload;
 
@@ -889,29 +2158,34 @@ function renderFieldHtml(field, value) {
 }
 
 
-function corpusCircleHtml(value) {
-    return `
-  <div class="relative w-80 h-80 flex items-center justify-center">
-    <svg class="w-full h-full -rotate-90">
-      <circle cx="50%" cy="50%" r="120"
-        stroke="rgba(255,255,255,0.1)" stroke-width="12" fill="none" />
-      <circle cx="50%" cy="50%" r="120"
-        stroke="#c68a4b" stroke-width="12" fill="none"
-        stroke-dasharray="754" stroke-dashoffset="0"
-        stroke-linecap="round" />
-    </svg>
+function corpusCircleHtml(totalCorpus) {
+    const isTimeBased = totalCorpus?.currency === false || totalCorpus?.timeValue;
 
-    <div class="absolute text-center">
-      <p class="text-brand-400 text-xs font-bold uppercase tracking-widest mb-2">
-        Target Corpus
-      </p>
-      <h2 class="text-4xl font-serif font-bold text-white">
-        ${formatIndianCurrency(value)}
-      </h2>
+    return `
+    <div class="relative w-80 h-80 flex items-center justify-center">
+      <svg class="w-full h-full -rotate-90">
+        <circle cx="50%" cy="50%" r="120"
+          stroke="rgba(255,255,255,0.1)" stroke-width="12" fill="none" />
+        <circle cx="50%" cy="50%" r="120"
+          stroke="#c68a4b" stroke-width="12" fill="none"
+          stroke-dasharray="754" stroke-dashoffset="0"
+          stroke-linecap="round" />
+      </svg>
+
+      <div class="absolute text-center px-4">
+        <p class="text-brand-400 text-xs font-bold uppercase tracking-widest mb-2">
+          ${totalCorpus.label}
+        </p>
+        <h2 class="text-4xl font-serif font-bold text-white">
+          ${isTimeBased
+            ? totalCorpus.timeValue
+            : formatIndianCurrency(totalCorpus.value, true)}
+        </h2>
+      </div>
     </div>
-  </div>
-  `;
+    `;
 }
+
 
 function generateGoalReportHtml(
     payload,
@@ -929,9 +2203,10 @@ function generateGoalReportHtml(
   </head>
 
 <body class="bg-slate-100 p-4 font-sans">
- <div class="max-w-5xl mx-auto bg-white rounded-[2.5rem] shadow-xl p-2">
-   ${companyHeaderHtml()}
+${companyHeaderHtml()}
    ${goalContextHtml(payload, goalConfig, subGoalConfig)}
+ <div class="max-w-5xl mx-auto bg-white rounded-[0.5rem] shadow-xl p-2">
+   
   <!-- HERO (same as FE, static) -->
   <section class="bg-slate-900 text-white pt-8 pb-32">
     <div class="max-w-7xl mx-auto px-8">
@@ -959,18 +2234,32 @@ function generateGoalReportHtml(
             ${corpusCircleHtml(results.totalCorpus)}
           </div>
 
-          ${results.monthlySIP
+        ${results.monthlySIP
             ? `
-            <div class="text-center mb-4">
-              <div class="text-sm font-bold text-emerald-400 uppercase tracking-widest">
-                Monthly SIP Required
-              </div>
-              <div class="text-3xl font-bold">
-                ${results.monthlySIP}
-              </div>
-            </div>`
+  <div class="text-center mb-4">
+    <div class="text-sm font-bold text-emerald-400 uppercase tracking-widest">
+      Monthly SIP
+    </div>
+    <div class="text-3xl font-bold">
+      ${formatIndianCurrency(results.monthlySIP, true)}
+    </div>
+  </div>`
             : ''
         }
+
+${results.lumpsumRequired
+            ? `
+  <div class="text-center mb-4">
+    <div class="text-sm font-bold text-emerald-400 uppercase tracking-widest">
+      Lumpsum Required
+    </div>
+    <div class="text-3xl font-bold">
+      ${formatIndianCurrency(results.lumpsumRequired, true)}
+    </div>
+  </div>`
+            : ''
+        }
+
 
           <div class="grid grid-cols-2 gap-4">
             ${(results.breakdown || [])
@@ -1006,7 +2295,20 @@ function generateGoalReportHtml(
         </div>
       </div>
   </div>
+  <section class="py-8 bg-slate-50 text-center border-t border-slate-200">
+  <div class="max-w-4xl mx-auto px-4 flex items-start gap-3 justify-center text-slate-500">
+    <div class="mt-0.5 text-slate-400 text-sm">⚠</div>
+    <p class="text-[11px] leading-relaxed text-left">
+      <strong>Disclaimer:</strong>
+      Past performance may or may not be sustained in future and is not a guarantee of any future returns.
+      Please note that these calculators are for illustrations only and do not represent actual returns.
+      Mutual Funds do not have a fixed rate of return and it is not possible to predict the rate of return.
+      Mutual Fund investments are subject to market risks, read all scheme related documents carefully.
+    </p>
+  </div>
+</section>
 </div>
+
 </body>
 </html>
 `;

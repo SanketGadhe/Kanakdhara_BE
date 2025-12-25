@@ -1,21 +1,21 @@
 const mailContent = {
-    FinancialHealthMail: {
-        subject: "Kanakdhara - Your Comprehensive Financial Health Report",
-        message: "Hi, please find your Kanakdhara Financial Health Report attached."
-    },
-    GoalCalculatorMail: {
-        subject: "Kanakdhara - Your Goal Calculator Report",
-        message: "Hi, please find your Kanakdhara Investment Goal Calculator Report attached."
-    },
-    RiskProfileMail: {
-        subject: "Kanakdhara - Your Risk Profile Report",
-        message: "Hi, please find your Kanakdhara Risk Profile Report attached."
-    }
+  FinancialHealthMail: {
+    subject: "Kanakdhara - Your Comprehensive Financial Health Report",
+    message: "Hi, please find your Kanakdhara Financial Health Report attached."
+  },
+  GoalCalculatorMail: {
+    subject: "Kanakdhara - Your Goal Calculator Report",
+    message: "Hi, please find your Kanakdhara Investment Goal Calculator Report attached."
+  },
+  RiskProfileMail: {
+    subject: "Kanakdhara - Your Risk Profile Report",
+    message: "Hi, please find your Kanakdhara Risk Profile Report attached."
+  }
 };
 function buildMeetingEmail(meetingLink) {
-    return {
-        Subject: "Meeting Confirmed – Kanakdhara Investments",
-        Message: `Thank you for scheduling a meeting with us.
+  return {
+    Subject: "Meeting Confirmed – Kanakdhara Investments",
+    Message: `Thank you for scheduling a meeting with us.
 
 Your meeting has been successfully confirmed, and we’re looking forward to our discussion.
 
@@ -30,23 +30,23 @@ Warm regards,
 Chetan Joshi, CFP®
 Founder & CEO
 Kanakdhara Investments`
-    };
+  };
 }
 
 const RISK_ZONES = [
-    { label: 'Highly Conservative', color: '#67e8f9' }, // cyan
-    { label: 'Conservative', color: '#34d399' },        // emerald
-    { label: 'Moderate', color: '#facc15' },            // amber
-    { label: 'Aggressive', color: '#fb7185' },          // rose
-    { label: 'Very Aggressive', color: '#f87171' }      // red
+  { label: 'Highly Conservative', color: '#67e8f9' }, // cyan
+  { label: 'Conservative', color: '#34d399' },        // emerald
+  { label: 'Moderate', color: '#facc15' },            // amber
+  { label: 'Aggressive', color: '#fb7185' },          // rose
+  { label: 'Very Aggressive', color: '#f87171' }      // red
 ];
 
 function companyHeaderHtml() {
-    return `
+  return `
   <div class="flex items-center justify-between border-b border-slate-200 pb-6 mb-6">
     <div class="flex items-center gap-4">
       <img 
-        src="http://localhost:4000/logo.png"
+        src="https://kanakdharainv.com/static/logo-2.png"
         alt="Kanakdhara Investment"
         class="h-12 object-contain"
       />
@@ -65,22 +65,22 @@ function companyHeaderHtml() {
   `;
 }
 function gaugeHtmlWithZones(score, max) {
-    const angle = Math.min(1, score / max) * 180 - 90;
+  const angle = Math.min(1, score / max) * 180 - 90;
 
-    const arcPaths = [
-        'M30 150 A120 120 0 0 1 78 60',
-        'M78 60 A120 120 0 0 1 150 30',
-        'M150 30 A120 120 0 0 1 222 60',
-        'M222 60 A120 120 0 0 1 270 150'
-    ];
+  const arcPaths = [
+    'M30 150 A120 120 0 0 1 78 60',
+    'M78 60 A120 120 0 0 1 150 30',
+    'M150 30 A120 120 0 0 1 222 60',
+    'M222 60 A120 120 0 0 1 270 150'
+  ];
 
-    return `
+  return `
   <div class="relative w-64 h-32 mx-auto my-6">
     <svg viewBox="0 0 300 160" class="w-full h-full">
 
       ${arcPaths
-            .map(
-                (d, i) => `
+      .map(
+        (d, i) => `
           <path
             d="${d}"
             fill="none"
@@ -88,8 +88,8 @@ function gaugeHtmlWithZones(score, max) {
             stroke-width="24"
             stroke-linecap="round"
           />`
-            )
-            .join('')}
+      )
+      .join('')}
 
       <!-- Needle -->
       <g transform="rotate(${angle} 150 150)">
@@ -109,7 +109,7 @@ function gaugeHtmlWithZones(score, max) {
   `;
 }
 function customerInfoHtml(user) {
-    return `
+  return `
   <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 mb-4">
     <h4 class="text-sm font-bold text-slate-900 uppercase tracking-wide mb-2">
       Customer Information
@@ -138,8 +138,8 @@ function customerInfoHtml(user) {
 }
 
 function generateRiskProfileHtml(payload) {
-    const { user, assessment, allocation, keyInputData } = payload;
-    return `
+  const { user, assessment, allocation, keyInputData } = payload;
+  return `
 <!DOCTYPE html>
             <html>
                 <head>
@@ -243,44 +243,44 @@ function generateRiskProfileHtml(payload) {
 }
 
 const FINANCIAL_ZONE = [
-    { label: 'Excellent', color: '#06b6d4' }, // cyan
-    { label: 'Good', color: '#10b981' },      // emerald
-    { label: 'Average', color: '#f59e0b' },   // amber
-    { label: 'Weak', color: '#f97316' }       // orange
+  { label: 'Excellent', color: '#06b6d4' }, // cyan
+  { label: 'Good', color: '#10b981' },      // emerald
+  { label: 'Average', color: '#f59e0b' },   // amber
+  { label: 'Weak', color: '#f97316' }       // orange
 ];
 function polarToCartesian(cx, cy, r, angleDeg) {
-    const rad = (angleDeg - 90) * Math.PI / 180;
-    return {
-        x: cx + r * Math.cos(rad),
-        y: cy + r * Math.sin(rad),
-    };
+  const rad = (angleDeg - 90) * Math.PI / 180;
+  return {
+    x: cx + r * Math.cos(rad),
+    y: cy + r * Math.sin(rad),
+  };
 }
 
 function describeArc(
-    cx,
-    cy,
-    r,
-    startAngle,
-    endAngle,
+  cx,
+  cy,
+  r,
+  startAngle,
+  endAngle,
 ) {
-    const start = polarToCartesian(cx, cy, r, endAngle);
-    const end = polarToCartesian(cx, cy, r, startAngle);
-    const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
+  const start = polarToCartesian(cx, cy, r, endAngle);
+  const end = polarToCartesian(cx, cy, r, startAngle);
+  const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
 
-    return `M ${start.x} ${start.y}
+  return `M ${start.x} ${start.y}
           A ${r} ${r} 0 ${largeArcFlag} 0 ${end.x} ${end.y}`;
 }
 
 
 function financialHealthGaugeHtml(score, max) {
-    const rotation = Math.min(1, score / max) * 180 - 90;
-    const ARC_PATH = 'M 30 150 A 120 120 0 0 1 270 150';
-    const ARC_LENGTH = Math.PI * 120; // semicircle length
-    const ZONE_COUNT = 4;
-    const SEG_LEN = ARC_LENGTH / ZONE_COUNT;
+  const rotation = Math.min(1, score / max) * 180 - 90;
+  const ARC_PATH = 'M 30 150 A 120 120 0 0 1 270 150';
+  const ARC_LENGTH = Math.PI * 120; // semicircle length
+  const ZONE_COUNT = 4;
+  const SEG_LEN = ARC_LENGTH / ZONE_COUNT;
 
 
-    return `
+  return `
   <div class="relative w-64 h-32 mx-auto my-6">
     <svg viewBox="0 0 300 160" class="w-full h-full">
 
@@ -330,9 +330,9 @@ function financialHealthGaugeHtml(score, max) {
 
 
 function generateFinancialHealthHtml(data) {
-    const { user, assessment, keyInputs, investorPersona, actionCanBeTaken } = data;
+  const { user, assessment, keyInputs, investorPersona, actionCanBeTaken } = data;
 
-    return `
+  return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -360,9 +360,9 @@ function generateFinancialHealthHtml(data) {
 
     <!-- Gauge -->
     ${financialHealthGaugeHtml(
-        assessment.totalScore,
-        assessment.maxPossible
-    )}
+    assessment.totalScore,
+    assessment.maxPossible
+  )}
 
     <!-- Analysis -->
     <div class="grid grid-cols-2 gap-8 mt-12 mb-10">
@@ -427,12 +427,127 @@ function generateFinancialHealthHtml(data) {
 `;
 }
 
+function getSubscriptionMailTemplate() {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to Kanakdhara Investments</title>
+</head>
+
+<body style="margin:0; padding:0; background-color:#f5f7fa; font-family:Arial, Helvetica, sans-serif; color:#1f2937;">
+
+  <!-- Outer Wrapper -->
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f7fa; padding:20px 0;">
+    <tr>
+      <td align="center">
+
+        <!-- Email Container -->
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+
+          <!-- Header -->
+          <tr>
+            <td align="center" style="padding:24px;">
+              <img
+                src="https://kanakdharainv.com/static/logo-2.png"
+                alt="Kanakdhara Investments"
+                style="max-width:180px; height:auto;"
+              />
+            </td>
+          </tr>
+
+          <!-- Welcome -->
+          <tr>
+            <td style="padding:32px 40px 16px;">
+              <h1 style="margin:0 0 12px; font-size:24px; font-weight:700; color:#111827;">
+                Welcome to Kanakdhara Investments 👋
+              </h1>
+              <p style="margin:0; font-size:16px; line-height:1.6; color:#374151;">
+                Thank you for subscribing to the <strong>Kanakdhara Investments Newsletter</strong>.
+                We’re delighted to have you as part of our growing investor community.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding:0 40px 24px;">
+              <p style="margin:0 0 16px; font-size:15px; line-height:1.7; color:#374151;">
+                Through our newsletter, you’ll receive:
+              </p>
+
+              <ul style="margin:0 0 16px 18px; padding:0; font-size:15px; line-height:1.7; color:#374151;">
+                <li>Actionable market insights and investment updates</li>
+                <li>Practical financial planning and wealth-building strategies</li>
+                <li>Expert perspectives on mutual funds, equities, and long-term goals</li>
+                <li>Timely updates to help you stay disciplined and informed</li>
+              </ul>
+
+              <p style="margin:0; font-size:15px; line-height:1.7; color:#374151;">
+                Our goal is simple — to help you make confident, well-informed financial decisions
+                aligned with your long-term objectives.
+              </p>
+            </td>
+          </tr>
+
+          <!-- CTA -->
+          <tr>
+            <td align="center" style="padding:8px 40px 32px;">
+              <a
+                href="https://kanakdharainv.com"
+                style="display:inline-block; background-color:#111827; color:#ffffff;
+                       text-decoration:none; padding:14px 28px; border-radius:6px;
+                       font-size:15px; font-weight:600;"
+              >
+                Explore Kanakdhara Investments
+              </a>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px 40px; background-color:#f9fafb; border-top:1px solid #e5e7eb;">
+              <p style="margin:0 0 8px; font-size:14px; color:#374151;">
+                If you have any questions or would like personalised guidance, feel free to reply to this email.
+              </p>
+              <p style="margin:0; font-size:14px; color:#374151;">
+                Warm regards,<br />
+                <strong>Chetan Joshi, CFP®</strong><br />
+                Founder & CEO – Kanakdhara Investments
+              </p>
+            </td>
+          </tr>
+
+          <!-- Disclaimer -->
+          <tr>
+            <td style="padding:16px 40px;">
+              <p style="margin:0; font-size:12px; line-height:1.6; color:#6b7280;">
+                Disclaimer: Investments are subject to market risks. Please read all scheme-related documents carefully.
+                This communication is for informational purposes only and does not constitute investment advice.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+        <!-- End Container -->
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
+`;
+}
 
 module.exports = {
-    mailContent,
-    generateRiskProfileHtml,
-    generateFinancialHealthHtml,
-    companyHeaderHtml,
-    customerInfoHtml,
-    buildMeetingEmail
+  mailContent,
+  generateRiskProfileHtml,
+  generateFinancialHealthHtml,
+  companyHeaderHtml,
+  customerInfoHtml,
+  buildMeetingEmail,
+  getSubscriptionMailTemplate
 };

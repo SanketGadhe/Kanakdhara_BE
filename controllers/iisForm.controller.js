@@ -1,7 +1,7 @@
 const { getOrCreateCustomer } = require('./reportMail.controller.js');
 
 const IISFORM = require('../models/iisForm.model.js');
-const { sendMailToUser } = require('../services/mailService.js');
+const { sendMail } = require('../services/gmail.service.js');
 const CustomerInfo = require('../models/customerInfo.model.js')
 const submitIISForm = async (req, res) => {
     try {
@@ -16,7 +16,6 @@ const submitIISForm = async (req, res) => {
         }
 
         const customer = await getOrCreateCustomer(user)
-        console.log("Customer", customer._id)
         // 1️⃣ Save form
         const iis = new IISFORM({
             marital_status: payload.marital_status,
@@ -54,10 +53,10 @@ const submitIISForm = async (req, res) => {
             $push: { lastActivity: { time: new Date(), purpose: `IIS-Form-Submission`, reference: iis._id } }
         });
         // 2️⃣ Mail to CUSTOMER
-        await sendMailToUser({
-            toEmail: payload.email,
+        await sendMail({
+            to: payload.email,
             subject: 'Your Information Sheet Has Been Received',
-            message: `
+            htmlMessage: `
 Dear ${payload.full_name},
 
 Thank you for submitting your Information & Investment Sheet.
@@ -71,10 +70,10 @@ Team Kanakdhara Investments
         });
 
         // 3️⃣ Mail to INTERNAL TEAM
-        await sendMailToUser({
-            toEmail: process.env.INTERNAL_NOTIFICATION_EMAIL, // ex: ops@company.com
+        await sendMail({
+            to: process.env.INTERNAL_NOTIFICATION_EMAIL, // ex: ops@company.com
             subject: 'New IIS Form Submitted',
-            message: `
+            htmlMessage: `
 A new IIS form has been submitted.
 
 Name: ${payload.full_name}

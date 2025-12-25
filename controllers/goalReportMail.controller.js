@@ -1,6 +1,6 @@
 const { htmlToPdfBuffer } = require("../utils/htmlToPdf.js");
 const { GOAL_REPORT_CONFIG, generateGoalReportHtml } = require("../static/goalConfig.js");
-const { sendMailToUser } = require("../services/mailService.js");
+const { sendMail } = require("../services/gmail.service.js");
 const { mailContent } = require("../static/mailContent.js");
 const GoalReport = require("../models/goal.model.js")
 const { getOrCreateCustomer } = require('./reportMail.controller.js')
@@ -9,9 +9,7 @@ const sendGoalReport = async (req, res) => {
     const payload = req.body;
     const { inputs, meta, results, uiContext, user } = payload
     const { goalId, subGoalId } = payload.meta;
-    console.log("Preparing to send goal report:", goalId, subGoalId);
     const customer = await getOrCreateCustomer(user);
-    console.log("Customer id", customer)
     const CreatedGoal = await GoalReport.create({
         customerInfo: customer._id,
         meta,
@@ -32,17 +30,12 @@ const sendGoalReport = async (req, res) => {
 
     const pdf = await htmlToPdfBuffer(html);
 
-    await sendMailToUser({
-        toEmail: payload.user.email,
+    await sendMail({
+        to: payload.user.email,
         subject: `${mailContent.GoalCalculatorMail.subject} - ${subGoalConfig.title}`,
-        message: mailContent.GoalCalculatorMail.message,
-
-        attachments: [
-            {
-                filename: `${goalId}_${subGoalId}.pdf`,
-                content: pdf,
-            },
-        ],
+        htmlMessage: mailContent.GoalCalculatorMail.message,
+        pdf: pdf,
+        pdfFileName: `${goalId}_${subGoalId}.pdf`
     });
 
     res.json({ success: true });
