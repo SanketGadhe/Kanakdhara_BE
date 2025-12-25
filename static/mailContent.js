@@ -1,17 +1,18 @@
 const mailContent = {
   FinancialHealthMail: {
-    subject: "Kanakdhara - Your Comprehensive Financial Health Report",
+    subject: "Your Comprehensive Financial Health Quiz Report - Kanakdhara Investments",
     message: "Hi, please find your Kanakdhara Financial Health Report attached."
   },
   GoalCalculatorMail: {
-    subject: "Kanakdhara - Your Goal Calculator Report",
+    subject: "Your Goal Calculator Report",
     message: "Hi, please find your Kanakdhara Investment Goal Calculator Report attached."
   },
   RiskProfileMail: {
-    subject: "Kanakdhara - Your Risk Profile Report",
+    subject: "Your Risk Profile Report - Kanakdhara Investments",
     message: "Hi, please find your Kanakdhara Risk Profile Report attached."
   }
 };
+
 function buildMeetingEmail(meetingLink) {
   return {
     Subject: "Meeting Confirmed – Kanakdhara Investments",
@@ -255,22 +256,6 @@ function polarToCartesian(cx, cy, r, angleDeg) {
     y: cy + r * Math.sin(rad),
   };
 }
-
-function describeArc(
-  cx,
-  cy,
-  r,
-  startAngle,
-  endAngle,
-) {
-  const start = polarToCartesian(cx, cy, r, endAngle);
-  const end = polarToCartesian(cx, cy, r, startAngle);
-  const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
-
-  return `M ${start.x} ${start.y}
-          A ${r} ${r} 0 ${largeArcFlag} 0 ${end.x} ${end.y}`;
-}
-
 
 function financialHealthGaugeHtml(score, max) {
   const rotation = Math.min(1, score / max) * 180 - 90;

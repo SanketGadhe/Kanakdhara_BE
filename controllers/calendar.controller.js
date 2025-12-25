@@ -4,6 +4,7 @@ const {
 } = require('../services/googleCalendar.service');
 const { sendMail } = require('../services/gmail.service');
 const { buildMeetingEmail } = require('../static/mailContent');
+const { getBookFreeSessionMailTemplate } = require('../static/mailTemplate');
 
 
 /**
@@ -72,7 +73,12 @@ exports.bookSlot = async (req, res) => {
         const sentMailResult = await sendMail({
             to: email,
             subject: Subject,
-            htmlMessage: Message
+            htmlMessage: getBookFreeSessionMailTemplate({
+                name: req.body.name,
+                email: req.body.email,
+                preferredDate: req.body.start,
+                meetingLink: meetLink
+            }),
         });
 
         const sentMailTOClient = await sendMail({

@@ -1,5 +1,6 @@
 const customerModel = require("../models/customerInfo.model");
 const { sendMail } = require("../services/gmail.service");
+const { getContactMailTemplate } = require("../static/mailTemplate");
 
 // Controller to create a new customer
 const createCustomer = async (req, res) => {
@@ -13,12 +14,14 @@ const createCustomer = async (req, res) => {
             panCard,
         });
         const savedCustomer = await newCustomer.save();
-       
+
         await sendMail(
             {
                 to: email,
-                subject: "Thanks For Connecting",
-                htmlMessage: "Welcome to KanakDhara"
+                subject: "Welcome to Kanakdhara Investments",
+                htmlMessage: getContactMailTemplate(
+                    { name: name, email: email, phone: phone, message: "Meet you soon" }
+                )
             }
         )
         res.status(201).json(savedCustomer);

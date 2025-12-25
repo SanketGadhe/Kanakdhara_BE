@@ -16,9 +16,7 @@ const getCalendarClient = async () => {
  * 1️⃣ Get busy slots (for availability)
  */
 const getBusySlots = async ({ timeMin, timeMax }) => {
-    const calendar = getCalendarClient();
-    // console.log("Calendar Client:", calendar);
-
+    const calendar = await getCalendarClient();
     const response = await calendar.freebusy.query({
         requestBody: {
             timeMin,

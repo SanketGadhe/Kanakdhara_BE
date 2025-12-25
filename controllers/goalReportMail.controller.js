@@ -4,7 +4,8 @@ const { sendMail } = require("../services/gmail.service.js");
 const { mailContent } = require("../static/mailContent.js");
 const GoalReport = require("../models/goal.model.js")
 const { getOrCreateCustomer } = require('./reportMail.controller.js')
-const customerModel = require('../models/customerInfo.model.js')
+const customerModel = require('../models/customerInfo.model.js');
+const { getGoalCalulatorTemplate } = require("../static/mailTemplate.js");
 const sendGoalReport = async (req, res) => {
     const payload = req.body;
     const { inputs, meta, results, uiContext, user } = payload
@@ -32,8 +33,17 @@ const sendGoalReport = async (req, res) => {
 
     await sendMail({
         to: payload.user.email,
-        subject: `${mailContent.GoalCalculatorMail.subject} - ${subGoalConfig.title}`,
-        htmlMessage: mailContent.GoalCalculatorMail.message,
+        subject: `${mailContent.GoalCalculatorMail.subject} - ${subGoalConfig.title} - Kanakdhara Investments`,
+        htmlMessage: getGoalCalulatorTemplate({
+            name: payload.user.name,
+            email: payload.user.email,
+            assessmentDate: new Date().toLocaleString('en-IN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                timeZone: 'Asia/Kolkata'
+            })
+        }),
         pdf: pdf,
         pdfFileName: `${goalId}_${subGoalId}.pdf`
     });

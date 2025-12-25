@@ -24,11 +24,11 @@ exports.calculateMMI = ({ fiiNet, vix, niftyChange }) => {
 };
 
 exports.getMMIZone = value => {
-    if (value >= 80) return "Very Bullish";
-    if (value >= 60) return "Bullish";
+    if (value >= 80) return "Euphoric";
+    if (value >= 60) return "Risk";
     if (value >= 40) return "Neutral";
-    if (value >= 20) return "Euphoric";
-    return "Cautious";
+    if (value >= 20) return "Fear";
+    return "Panic";
 };
 
 

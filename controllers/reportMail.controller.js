@@ -5,6 +5,7 @@ const customerModel = require("../models/customerInfo.model.js");
 const reportModel = require("../models/report.model.js");
 const { ref } = require("process");
 const { getCustomerById } = require("./customerInfo.controllers.js");
+const { getRiskProfileSubmissionMailTemplate, getFinancialHealthQuizMailTemplate } = require("../static/mailTemplate.js");
 
 
 const getOrCreateCustomer = async (user) => {
@@ -60,7 +61,16 @@ const sendRiskProfileReport = async (req, res) => {
         const sentMailResult = await sendMail({
             to: user.email,
             subject: mailContent.RiskProfileMail.subject,
-            htmlMessage: mailContent.RiskProfileMail.message,
+            htmlMessage: getRiskProfileSubmissionMailTemplate({
+                name: user.name,
+                email: user.email,
+                assessmentDate: new Date().toLocaleString('en-IN', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    timeZone: 'Asia/Kolkata'
+                })
+            }),
             pdf: pdfOfRiskProfile,
             pdfFileName: `${user.name}_Risk_Profile_Report.pdf`
         });
@@ -126,7 +136,16 @@ const sendFinancialHealthReport = async (req, res) => {
         const sentMailResult = await sendMail({
             to: user.email,
             subject: mailContent.FinancialHealthMail.subject,
-            htmlMessage: mailContent.FinancialHealthMail.message,
+            htmlMessage: getFinancialHealthQuizMailTemplate({
+                name: user.name,
+                email: user.email,
+                assessmentDate: new Date().toLocaleString('en-IN', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    timeZone: 'Asia/Kolkata'
+                })
+            }),
             pdf: pdfOfFinancialHealth,
             pdfFileName: `${user.name}_Financial_Health_Report.pdf`
         });

@@ -43,7 +43,8 @@ app.use("/api", require("./routes/auth.routes"));
 app.use("/api", require("./routes/iisForm.routes"));
 app.use("/api/market", require("./routes/market.routes"));
 app.use("/api/newsletter", newsLetter);
-
+app.use("/api/market-mood", require("./routes/marketMoodIndicator.routes"));
+app.use("/api/job", require("./routes/jobApplication.routes"))
 /* ======================
    HEALTH CHECK
 ====================== */
