@@ -53,7 +53,7 @@ function companyHeaderHtml() {
       />
       <div>
         <h2 class="text-lg font-bold text-slate-900">Kanakdhara Investment</h2>
-        <p class="text-xs text-slate-500">Trusted Wealth & Risk Advisory</p>
+        <p class="text-xs text-slate-500">Clarity in Investing</p>
       </div>
     </div>
 
