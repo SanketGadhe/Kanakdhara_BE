@@ -116,6 +116,9 @@ const getMarketTicker = async (req, res) => {
                     high: Number(i.yearHigh),
                     low: Number(i.yearLow),
                 },
+                perChange30d: Number(perChange30d.toFixed(2)),
+                perChange365d: Number(perChange365d.toFixed(2)),
+                timestamp: Date.now(),
             };
         }).filter(Boolean);
 
