@@ -21,7 +21,6 @@ exports.sendMail = async ({
     const gmail = google.gmail({ version: 'v1', auth });
 
     const boundary = `boundary_${Date.now()}`;
-    console.log("Subject", subject)
     const lines = [
         `To: ${to}`,
         'From: "Calendar Booking" <me>',

@@ -67,7 +67,6 @@ exports.getMarketForNifty = async (value) => {
     const res = await nse.get("/api/equity-stockIndices", {
         params: { index: value },
     });
-    console.log("NIFTU SEDsz", res.data)
     return {
         last: res.data.metadata.last,
         change: res.data.metadata.change,

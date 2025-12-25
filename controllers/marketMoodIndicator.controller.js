@@ -8,7 +8,6 @@ exports.storeDailyMarketMood = async () => {
         // Check if today's data already exists
         const existing = await MarketMoodIndicator.findOne({ date: today });
         if (existing) {
-            console.log('Market mood data already exists for today');
             return existing;
         }
 
@@ -32,7 +31,6 @@ exports.storeDailyMarketMood = async () => {
         });
 
         await newRecord.save();
-        console.log('Daily market mood data stored successfully');
         return newRecord;
     } catch (error) {
         console.error('Error storing daily market mood:', error);
@@ -84,12 +82,8 @@ exports.getTodayMarketMood = async (req, res) => {
         let todayData = await MarketMoodIndicator.findOne({ date: today });
 
         if (!todayData) {
-            console.log(`Today's date (${today}) not found in history. Adding to history...`);
-            // Add today's data to history
             todayData = await exports.storeDailyMarketMood();
-            console.log(`Today's market mood data added to history for ${today}`);
         } else {
-            console.log(`Today's date (${today}) already exists in history`);
         }
 
         res.json({
