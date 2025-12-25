@@ -80,11 +80,16 @@ exports.getTodayMarketMood = async (req, res) => {
     try {
         const today = new Date().toISOString().slice(0, 10);
 
+        // Check if today's date data exists in history
         let todayData = await MarketMoodIndicator.findOne({ date: today });
 
         if (!todayData) {
-            // If no data for today, create it
+            console.log(`Today's date (${today}) not found in history. Adding to history...`);
+            // Add today's data to history
             todayData = await exports.storeDailyMarketMood();
+            console.log(`Today's market mood data added to history for ${today}`);
+        } else {
+            console.log(`Today's date (${today}) already exists in history`);
         }
 
         res.json({

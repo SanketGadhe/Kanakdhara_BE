@@ -21,6 +21,9 @@ const customerInfoSchema = new Monggose.Schema({
     panCard: {
         type: String,
     },
+    subject: {
+        type: String,
+    },
     lastActivity: [
         {
             time: {

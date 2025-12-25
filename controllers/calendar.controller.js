@@ -86,7 +86,7 @@ exports.bookSlot = async (req, res) => {
             subject: "A User From Website has Schedule the Meeting",
             htmlMessage: `
             Hey Chetan,
-                A User from the website has schedule a meeting with meeting link: ${meetLink}. Pls Join the meeting on Time
+                A ${req.body.name} from the website has schedule a meeting with meeting link: ${meetLink}. Pls Join the meeting on Time. Contact Detail of client phone no: ${req.body.phone}
                 Thanks
                 Sanket Gadhe`
         })

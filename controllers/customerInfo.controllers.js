@@ -6,11 +6,30 @@ const { getContactMailTemplate } = require("../static/mailTemplate");
 const createCustomer = async (req, res) => {
     try {
         const { name, email, phone, age, panCard } = req.body;
+        
+        // Check if customer already exists
+        const existingCustomer = await customerModel.findOne({ email });
+        
+        if (existingCustomer) {
+            // Send welcome email to existing customer
+            await sendMail(
+                {
+                    to: email,
+                    subject: "Welcome to Kanakdhara Investments",
+                    htmlMessage: getContactMailTemplate(
+                        { name: existingCustomer.name, email: existingCustomer.email, phone: existingCustomer.phone, message: "Meet you soon" }
+                    )
+                }
+            )
+            return res.status(200).json(existingCustomer);
+        }
+        
+        // Create new customer if doesn't exist
         const newCustomer = new customerModel({
             name,
             email,
             phone,
-            age,
+            age: Number(age),
             panCard,
         });
         const savedCustomer = await newCustomer.save();

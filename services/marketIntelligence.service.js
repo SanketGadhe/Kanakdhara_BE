@@ -121,8 +121,8 @@ const buildMarketIntelligence = async () => {
 
             primary_signal:
                 sentimentScore >= 60
-                    ? "Stock Specific Action"
-                    : "Risk Management",
+                    ? "Consider profit booking & be cautious"
+                    : "Market are suitable for new investments",
 
             analysis_factors: {
                 trend_strength: {
