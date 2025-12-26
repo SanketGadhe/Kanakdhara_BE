@@ -3,8 +3,6 @@ const { generateRiskProfileHtml, mailContent, generateFinancialHealthHtml } = re
 const { sendMail } = require("../services/gmail.service.js");
 const customerModel = require("../models/customerInfo.model.js");
 const reportModel = require("../models/report.model.js");
-const { ref } = require("process");
-const { getCustomerById } = require("./customerInfo.controllers.js");
 const { getRiskProfileSubmissionMailTemplate, getFinancialHealthQuizMailTemplate } = require("../static/mailTemplate.js");
 
 
@@ -28,10 +26,8 @@ const sendRiskProfileReport = async (req, res) => {
     try {
         const { user, metadata, allocation, assessment, keyInputData, notes } = req.body;
 
-        // 1. Resolve customer
+        // 1. Resolve customer and save report immediately
         const customerId = await getOrCreateCustomer(user);
-
-        // 2. Save report
         const riskProfileReport = await reportModel.create({
             reportType: "risk_profile",
             meta: {
@@ -47,49 +43,53 @@ const sendRiskProfileReport = async (req, res) => {
             }
         });
 
-        // 3. Generate PDF
-        const htmlContentofRiskProfile = generateRiskProfileHtml({
-            user,
-            assessment,
-            allocation,
-            keyInputData
-        });
-
-        const pdfOfRiskProfile = await htmlToPdfBuffer(htmlContentofRiskProfile);
-
-        // 4. Send mail
-        const sentMailResult = await sendMail({
-            to: user.email,
-            subject: mailContent.RiskProfileMail.subject,
-            htmlMessage: getRiskProfileSubmissionMailTemplate({
-                name: user.name,
-                email: user.email,
-                assessmentDate: new Date().toLocaleString('en-IN', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    timeZone: 'Asia/Kolkata'
-                })
-            }),
-            pdf: pdfOfRiskProfile,
-            pdfFileName: `${user.name}_Risk_Profile_Report.pdf`
-        });
-
-        // if (!sentMailResult.success) {
-        //     throw new Error("Failed to send email");
-        // }
-
+        // Send immediate success response
         res.status(200).json({
             success: true,
-            message: "Risk Profile Report sent & saved successfully.",
+            message: "Risk Profile Report request accepted. You will receive the PDF report via email shortly.",
             reportId: riskProfileReport._id
         });
+
+        // Process PDF and email in background
+        setImmediate(async () => {
+            try {
+                const htmlContentofRiskProfile = generateRiskProfileHtml({
+                    user,
+                    assessment,
+                    allocation,
+                    keyInputData
+                });
+
+                const pdfOfRiskProfile = await htmlToPdfBuffer(htmlContentofRiskProfile);
+
+                await sendMail({
+                    to: user.email,
+                    subject: mailContent.RiskProfileMail.subject,
+                    htmlMessage: getRiskProfileSubmissionMailTemplate({
+                        name: user.name,
+                        email: user.email,
+                        assessmentDate: new Date().toLocaleString('en-IN', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            timeZone: 'Asia/Kolkata'
+                        })
+                    }),
+                    pdf: pdfOfRiskProfile,
+                    pdfFileName: `${user.name}_Risk_Profile_Report.pdf`
+                });
+
+                console.log(`Risk profile report sent successfully to ${user.email}`);
+            } catch (error) {
+                console.error('Background risk profile processing failed:', error);
+            }
+        });
+
     } catch (error) {
-        console.error("Error sending Risk Profile Report:", error);
+        console.error("Error processing Risk Profile Report:", error);
         res.status(500).json({
             success: false,
-            message: "Failed to send Risk Profile Report",
-            error: error.message
+            message: "Failed to process Risk Profile Report request"
         });
     }
 };
@@ -97,10 +97,8 @@ const sendFinancialHealthReport = async (req, res) => {
     try {
         const { user, assessment, keyInputs, investorPersona, actionCanBeTaken } = req.body;
 
-        // 1. Resolve customer
+        // 1. Resolve customer and save report immediately
         const customer = await getOrCreateCustomer(user);
-
-        // 2. Save report
         const financialHealthReport = await reportModel.create({
             reportType: "financial_health",
             meta: {
@@ -120,51 +118,54 @@ const sendFinancialHealthReport = async (req, res) => {
             $push: { lastActivity: { time: new Date(), purpose: "financial_health", reference: financialHealthReport._id } }
         });
 
-
-        // 3. Generate PDF
-        const htmlContentofFinancialHealth = generateFinancialHealthHtml({
-            user,
-            assessment,
-            keyInputs,
-            investorPersona,
-            actionCanBeTaken
-        });
-
-        const pdfOfFinancialHealth = await htmlToPdfBuffer(htmlContentofFinancialHealth);
-
-        // 4. Send mail
-        const sentMailResult = await sendMail({
-            to: user.email,
-            subject: mailContent.FinancialHealthMail.subject,
-            htmlMessage: getFinancialHealthQuizMailTemplate({
-                name: user.name,
-                email: user.email,
-                assessmentDate: new Date().toLocaleString('en-IN', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    timeZone: 'Asia/Kolkata'
-                })
-            }),
-            pdf: pdfOfFinancialHealth,
-            pdfFileName: `${user.name}_Financial_Health_Report.pdf`
-        });
-
-        // if (!sentMailResult.success) {
-        //     throw new Error("Failed to send email");
-        // }
-
+        // Send immediate success response
         res.status(200).json({
             success: true,
-            message: "Financial Health Report sent & saved successfully.",
+            message: "Financial Health Report request accepted. You will receive the PDF report via email shortly.",
             reportId: financialHealthReport._id
         });
+
+        // Process PDF and email in background
+        setImmediate(async () => {
+            try {
+                const htmlContentofFinancialHealth = generateFinancialHealthHtml({
+                    user,
+                    assessment,
+                    keyInputs,
+                    investorPersona,
+                    actionCanBeTaken
+                });
+
+                const pdfOfFinancialHealth = await htmlToPdfBuffer(htmlContentofFinancialHealth);
+
+                await sendMail({
+                    to: user.email,
+                    subject: mailContent.FinancialHealthMail.subject,
+                    htmlMessage: getFinancialHealthQuizMailTemplate({
+                        name: user.name,
+                        email: user.email,
+                        assessmentDate: new Date().toLocaleString('en-IN', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            timeZone: 'Asia/Kolkata'
+                        })
+                    }),
+                    pdf: pdfOfFinancialHealth,
+                    pdfFileName: `${user.name}_Financial_Health_Report.pdf`
+                });
+
+                console.log(`Financial health report sent successfully to ${user.email}`);
+            } catch (error) {
+                console.error('Background financial health processing failed:', error);
+            }
+        });
+
     } catch (error) {
-        console.error("Error sending Financial Health Report:", error);
+        console.error("Error processing Financial Health Report:", error);
         res.status(500).json({
             success: false,
-            message: "Failed to send Financial Health Report",
-            error: error.message
+            message: "Failed to process Financial Health Report request"
         });
     }
 };

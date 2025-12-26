@@ -17,36 +17,40 @@ async function getOwnerGoogleTokens() {
 }
 
 /**
- * Persist owner tokens into the project's .env as a base64-encoded JSON string
- * This overwrites or appends the `SAVE_OWNERS_TOKEN` entry.
- * tokens: { access_token, refresh_token }
+ * Persist owner tokens into the database
+ * tokens: { access_token, refresh_token, scope, token_type, expiry_date }
  */
-function saveOwnerGoogleTokens(tokens = {}) {
+async function saveOwnerGoogleTokens(tokens = {}) {
     const {
         access_token, refresh_token, scope, token_type,
         expiry_date
     } = tokens;
+    
     if (!access_token || !refresh_token) {
         throw new Error('Missing access_token or refresh_token');
     }
 
-    // Create a new GoogleAuth instance with the provided tokens
-    const googleAuthInstance = new googleAuth({
-        access_token,
-        refresh_token,
-        scope,
-        token_type,
-        expiry_date
-    });
-
-    // Save the instance to the database
-    googleAuthInstance.save()
-        .then(() => {
-            console.log('GoogleAuth instance saved successfully');
-        })
-        .catch((error) => {
-            console.error('Error saving GoogleAuth instance:', error);
+    try {
+        // Remove existing tokens first
+        await googleAuth.deleteMany({});
+        
+        // Create a new GoogleAuth instance with the provided tokens
+        const googleAuthInstance = new googleAuth({
+            access_token,
+            refresh_token,
+            scope,
+            token_type,
+            expiry_date
         });
+
+        // Save the instance to the database
+        await googleAuthInstance.save();
+        console.log('GoogleAuth tokens saved successfully to database');
+        
+    } catch (error) {
+        console.error('Error saving GoogleAuth tokens:', error);
+        throw error;
+    }
 }
 
 module.exports = {

@@ -8,7 +8,7 @@ function renderGoalCalculatorReportHTML(data) {
   const { clientName, clientEmail, clientPhone, clientAddress } = {
     "clientName": "Kanakdhara Investment",
     "phclientPhoneone": "+91 78903 24370",
-    "clientEmail": "chetan@kanakdharainv.com",
+    "clientEmail": "connect@kanakdharainv.com",
     "clientAddress": "Bengaluru, India"
   }
   const {

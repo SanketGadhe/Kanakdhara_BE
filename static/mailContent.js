@@ -15,7 +15,7 @@ const mailContent = {
 
 function buildMeetingEmail(meetingLink) {
   return {
-    Subject: "Meeting Confirmed – Kanakdhara Investments",
+    Subject: "Meeting Confirmed - Kanakdhara Investments",
     Message: `Thank you for scheduling a meeting with us.
 
 Your meeting has been successfully confirmed, and we’re looking forward to our discussion.
@@ -59,8 +59,8 @@ function companyHeaderHtml() {
 
     <div class="text-right text-xs text-slate-600 leading-relaxed">
       <p>📞 +91 78903 24370</p>
-      <p>✉️ chetan@kanakdharainv.com</p>
-      <p>📍 Bengaluru, India</p>
+      <p>✉️ connect@kanakdharainv.com</p>
+      <p>Bengaluru, India</p>
     </div>
   </div>
   `;
@@ -500,7 +500,8 @@ function getSubscriptionMailTemplate() {
               <p style="margin:0; font-size:14px; color:#374151;">
                 Warm regards,<br />
                 <strong>Chetan Joshi, CFP®</strong><br />
-                Founder & CEO – Kanakdhara Investments
+                Founder & CEO – Kanakdhara Investments<br />
+                Phone - +91 7890324370
               </p>
             </td>
           </tr>

@@ -1,10 +1,10 @@
 function getContactMailTemplate({
-    name = "Investor",
-    email = "",
-    phone = "",
-    message = ""
+  name = "Investor",
+  email = "",
+  phone = "",
+  message = ""
 }) {
-    return `
+  return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -104,7 +104,8 @@ function getContactMailTemplate({
               <p style="margin:0; font-size:14px; color:#374151;">
                 Warm regards,<br />
                 <strong>Chetan Joshi, CFP®</strong><br />
-                Founder & CEO – Kanakdhara Investments
+                Founder & CEO – Kanakdhara Investments<br/>
+                Phone - +91 7890324370
               </p>
             </td>
           </tr>
@@ -131,13 +132,13 @@ function getContactMailTemplate({
 `;
 }
 function getJoinTeamMailTemplate({
-    name = "Candidate",
-    email = "",
-    phone = "",
-    position = "",
-    message = ""
+  name = "Candidate",
+  email = "",
+  phone = "",
+  position = "",
+  message = ""
 }) {
-    return `
+  return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -268,11 +269,11 @@ function getJoinTeamMailTemplate({
 `;
 }
 function getRiskProfileSubmissionMailTemplate({
-    name = "Investor",
-    email = "",
-    assessmentDate = ""
+  name = "Investor",
+  email = "",
+  assessmentDate = ""
 }) {
-    return `
+  return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -377,7 +378,8 @@ function getRiskProfileSubmissionMailTemplate({
               <p style="margin:0; font-size:14px; color:#374151;">
                 Warm regards,<br />
                 <strong>Chetan Joshi, CFP®</strong><br />
-                Founder & CEO – Kanakdhara Investments
+                Founder & CEO – Kanakdhara Investments<br/>
+                Phone - +91 7890324370
               </p>
             </td>
           </tr>
@@ -405,11 +407,11 @@ function getRiskProfileSubmissionMailTemplate({
 `;
 }
 function getFinancialHealthQuizMailTemplate({
-    name = "Participant",
-    email = "",
-    assessmentDate = ""
+  name = "Participant",
+  email = "",
+  assessmentDate = ""
 }) {
-    return `
+  return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -516,7 +518,8 @@ function getFinancialHealthQuizMailTemplate({
               <p style="margin:0; font-size:14px; color:#374151;">
                 Warm regards,<br />
                 <strong>Chetan Joshi, CFP®</strong><br />
-                Founder & CEO – Kanakdhara Investments
+                Founder & CEO – Kanakdhara Investments<br/>
+                Phone - +91 7890324370
               </p>
             </td>
           </tr>
@@ -544,14 +547,14 @@ function getFinancialHealthQuizMailTemplate({
 `;
 }
 function getBookFreeSessionMailTemplate({
-    name = "Investor",
-    email = "",
-    preferredDate = "",
-    meetingLink = "",
+  name = "Investor",
+  email = "",
+  preferredDate = "",
+  meetingLink = "",
 }) {
 
 
-    return `
+  return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -635,7 +638,8 @@ We’ve received your request and will confirm the session details shortly.
 <p style="font-size:14px;">
 Warm regards,<br>
 <strong>Chetan Joshi, CFP®</strong><br>
-Founder & CEO – Kanakdhara Investments
+Founder & CEO – Kanakdhara Investments<br/>
+Phone - +91 7890324370
 </p>
 </td>
 </tr>
@@ -658,11 +662,11 @@ Disclaimer: This session is introductory and does not constitute investment advi
 `;
 }
 function getGoalCalulatorTemplate({
-    name = "Participant",
-    email = "",
-    assessmentDate = ""
+  name = "Participant",
+  email = "",
+  assessmentDate = ""
 }) {
-    return `
+  return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -753,7 +757,8 @@ function getGoalCalulatorTemplate({
               <p style="margin:0; font-size:14px; color:#374151;">
                 Warm regards,<br />
                 <strong>Chetan Joshi, CFP®</strong><br />
-                Founder & CEO – Kanakdhara Investments
+                Founder & CEO – Kanakdhara Investments<br/>
+                Phone - +91 7890324370
               </p>
             </td>
           </tr>
@@ -781,10 +786,10 @@ function getGoalCalulatorTemplate({
 `;
 }
 module.exports = {
-    getBookFreeSessionMailTemplate,
-    getContactMailTemplate,
-    getJoinTeamMailTemplate,
-    getRiskProfileSubmissionMailTemplate,
-    getFinancialHealthQuizMailTemplate,
-    getGoalCalulatorTemplate
+  getBookFreeSessionMailTemplate,
+  getContactMailTemplate,
+  getJoinTeamMailTemplate,
+  getRiskProfileSubmissionMailTemplate,
+  getFinancialHealthQuizMailTemplate,
+  getGoalCalulatorTemplate
 }
