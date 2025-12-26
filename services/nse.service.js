@@ -3,7 +3,7 @@ const { headers } = require("../utils/nseHeaders");
 
 const nse = axios.create({
     baseURL: "https://www.nseindia.com",
-    timeout: 10000,
+    timeout: 100000,
     headers: {
         "User-Agent":
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
