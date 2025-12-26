@@ -72,88 +72,102 @@ function calculateSentimentScore({
 // };
 
 const buildMarketIntelligence = async () => {
-    const vix = await getVIX();
-    const market = await getMarketDirection();
-    const nifty_500_summary = await getMarketForNifty("NIFTY 500");
-    const nifty_bank_summary = await getMarketForNifty("NIFTY BANK");
-    const niftyIT = await getMarketForNifty("NIFTY IT");
-    // 🔑 REAL NIFTY 50 Breadth
-    const breadth = await getNifty50AdvanceDecline();
+    try {
+        // Add timeout wrapper for all external API calls
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Market intelligence timeout')), 20000);
+        });
 
-    const sentimentScore = calculateSentimentScore({
-        niftyChange: market.percentChange,
-        breadthRatio: breadth.ratio,
-        vix,
-    });
+        const marketDataPromise = Promise.all([
+            getVIX(),
+            getMarketDirection(),
+            getMarketForNifty("NIFTY 500"),
+            getMarketForNifty("NIFTY BANK"),
+            getMarketForNifty("NIFTY IT"),
+            getNifty50AdvanceDecline()
+        ]);
 
-    const vixInsight = interpretVIX(vix);
+        const [vix, market, nifty_500_summary, nifty_bank_summary, niftyIT, breadth] = 
+            await Promise.race([marketDataPromise, timeoutPromise]);
 
-    return {
-        api_source_data: {
-            market_status: {
-                status: "Closed",
-                trade_date: market.tradeDate,
-                market_cap_status: "Normal",
+        const sentimentScore = calculateSentimentScore({
+            niftyChange: market.percentChange,
+            breadthRatio: breadth.ratio,
+            vix,
+        });
+
+        const vixInsight = interpretVIX(vix);
+
+        return {
+            api_source_data: {
+                market_status: {
+                    status: "Closed",
+                    trade_date: market.tradeDate,
+                    market_cap_status: "Normal",
+                },
+
+                nifty_50_summary: {
+                    index: "NIFTY 50",
+                    last_price: market.last,
+                    change: market.change,
+                    pChange: market.percentChange,
+                    market_breadth: {
+                        advances: breadth.advances,
+                        declines: breadth.declines,
+                        unchanged: breadth.unchanged,
+                        ratio: breadth.ratio,
+                    },
+                },
+                nifty_500_summary: nifty_500_summary,
+                nifty_bank_summary: nifty_bank_summary,
+                nifty_it_summary: niftyIT
             },
 
-            nifty_50_summary: {
-                index: "NIFTY 50",
-                last_price: market.last,
-                change: market.change,
-                pChange: market.percentChange,
-                market_breadth: {
-                    advances: breadth.advances,
-                    declines: breadth.declines,
-                    unchanged: breadth.unchanged,
-                    ratio: breadth.ratio,
+            market_mood_indicator: {
+                sentiment_score: sentimentScore,
+                sentiment_label: getMMIZone(sentimentScore),
+
+                risk_level: vixInsight.risk,
+
+                primary_signal:
+                    sentimentScore >= 60
+                        ? "Consider profit booking & be cautious"
+                        : "Market are suitable for new investments",
+
+                analysis_factors: {
+                    trend_strength: {
+                        status: classifyTrend(market.percentChange),
+                        value: market.percentChange,
+                        reason: `NIFTY moved ${market.percentChange}% today.`,
+                    },
+
+                    market_breadth: {
+                        status: breadth.status,
+                        value: breadth.ratio,
+                        reason:
+                            breadth.status !== "Unavailable"
+                                ? `Advance/Decline ratio is ${breadth.ratio}, indicating ${breadth.status.toLowerCase()} participation in NIFTY 50.`
+                                : "Breadth data unavailable from NSE.",
+                    },
+
+                    volatility_vix: {
+                        status: vixInsight.label,
+                        value: vix,
+                        reason: `VIX at ${vix} suggests ${vixInsight.risk.toLowerCase()} risk.`,
+                    },
+
                 },
+
+                investment_action:
+                    sentimentScore >= 60
+                        ? "Accumulate Quality Stocks / Hold"
+                        : "Stay Defensive / Protect Capital",
             },
-            nifty_500_summary: nifty_500_summary,
-            nifty_bank_summary: nifty_bank_summary,
-            nifty_it_summary: niftyIT
-        },
-
-        market_mood_indicator: {
-            sentiment_score: sentimentScore,
-            sentiment_label: getMMIZone(sentimentScore),
-
-            risk_level: vixInsight.risk,
-
-            primary_signal:
-                sentimentScore >= 60
-                    ? "Consider profit booking & be cautious"
-                    : "Market are suitable for new investments",
-
-            analysis_factors: {
-                trend_strength: {
-                    status: classifyTrend(market.percentChange),
-                    value: market.percentChange,
-                    reason: `NIFTY moved ${market.percentChange}% today.`,
-                },
-
-                market_breadth: {
-                    status: breadth.status,
-                    value: breadth.ratio,
-                    reason:
-                        breadth.status !== "Unavailable"
-                            ? `Advance/Decline ratio is ${breadth.ratio}, indicating ${breadth.status.toLowerCase()} participation in NIFTY 50.`
-                            : "Breadth data unavailable from NSE.",
-                },
-
-                volatility_vix: {
-                    status: vixInsight.label,
-                    value: vix,
-                    reason: `VIX at ${vix} suggests ${vixInsight.risk.toLowerCase()} risk.`,
-                },
-
-            },
-
-            investment_action:
-                sentimentScore >= 60
-                    ? "Accumulate Quality Stocks / Hold"
-                    : "Stay Defensive / Protect Capital",
-        },
-    };
+        };
+    } catch (error) {
+        console.error('Market intelligence service error:', error);
+        throw error;
+    }
 };
 
 module.exports = {

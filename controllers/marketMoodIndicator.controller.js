@@ -76,6 +76,16 @@ exports.getMarketMoodHistory = async (req, res) => {
 
 exports.getTodayMarketMood = async (req, res) => {
     try {
+        // Set response timeout to prevent SIGTERM
+        const timeout = setTimeout(() => {
+            if (!res.headersSent) {
+                res.status(408).json({
+                    success: false,
+                    message: "Request timeout - market mood data taking too long to fetch"
+                });
+            }
+        }, 25000); // 25 second timeout
+
         const today = new Date().toISOString().slice(0, 10);
 
         // Check if today's date data exists in history
@@ -83,19 +93,24 @@ exports.getTodayMarketMood = async (req, res) => {
 
         if (!todayData) {
             todayData = await exports.storeDailyMarketMood();
-        } else {
         }
 
-        res.json({
-            success: true,
-            data: todayData
-        });
+        clearTimeout(timeout);
+
+        if (!res.headersSent) {
+            res.json({
+                success: true,
+                data: todayData
+            });
+        }
     } catch (error) {
         console.error('Error fetching today market mood:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch today market mood',
-            error: error.message
-        });
+        if (!res.headersSent) {
+            res.status(500).json({
+                success: false,
+                message: 'Failed to fetch today market mood',
+                error: process.env.NODE_ENV === 'development' ? error.message : 'Service temporarily unavailable'
+            });
+        }
     }
 };
