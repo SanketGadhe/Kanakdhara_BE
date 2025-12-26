@@ -9,7 +9,7 @@ const connectDB = require("./config/db");
 const app = express();
 
 // Trust proxy for deployment platforms (Render, Heroku, etc.)
-app.set('trust proxy', 1);
+// app.set('trust proxy', 1);
 
 // Security middleware
 const rateLimit = require("express-rate-limit");
