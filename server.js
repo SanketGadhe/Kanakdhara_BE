@@ -51,7 +51,8 @@ app.use(
 const allowedOrigins = [
   "https://kanakdharainv.com",
   "https://www.kanakdharainv.com",
-  "http://localhost:3000"
+  "http://localhost:3000",
+ "https://kanakdharainv.com/836defd4-a223-4a58-a59a-5acda484755a"
 ];
 
 // Add localhost only in development
