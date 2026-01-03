@@ -7,7 +7,7 @@ const CustomerInfo = require('../models/customerInfo.model.js');
 // Input validation helper
 const validateIISFormInput = (payload) => {
     const errors = [];
-    
+
     // Required fields validation
     const requiredFields = ['full_name', 'email', 'phone', 'pan_number', 'date_of_birth'];
     requiredFields.forEach(field => {
@@ -15,25 +15,25 @@ const validateIISFormInput = (payload) => {
             errors.push(`${field} is required`);
         }
     });
-    
+
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (payload.email && !emailRegex.test(payload.email)) {
         errors.push('Invalid email format');
     }
-    
+
     // Phone validation (basic)
     const phoneRegex = /^[+]?[0-9]{10,15}$/;
     if (payload.phone && !phoneRegex.test(payload.phone.replace(/\s+/g, ''))) {
         errors.push('Invalid phone number format');
     }
-    
+
     // PAN validation (Indian PAN format)
     const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
     if (payload.pan_number && !panRegex.test(payload.pan_number.toUpperCase())) {
         errors.push('Invalid PAN number format');
     }
-    
+
     // Date validation
     if (payload.date_of_birth) {
         const dob = new Date(payload.date_of_birth);
@@ -41,7 +41,7 @@ const validateIISFormInput = (payload) => {
             errors.push('Invalid date of birth');
         }
     }
-    
+
     return errors;
 };
 
@@ -54,7 +54,7 @@ const sanitizeInput = (str) => {
 const submitIISForm = async (req, res) => {
     try {
         const payload = req.body;
-        
+
         // Validate input
         const validationErrors = validateIISFormInput(payload);
         if (validationErrors.length > 0) {
@@ -64,7 +64,7 @@ const submitIISForm = async (req, res) => {
                 errors: validationErrors
             });
         }
-        
+
         // Sanitize string inputs
         Object.keys(payload).forEach(key => {
             if (typeof payload[key] === 'string') {
@@ -81,7 +81,7 @@ const submitIISForm = async (req, res) => {
         };
 
         const customer = await getOrCreateCustomer(user);
-        
+
         if (!customer) {
             throw new Error('Failed to create or retrieve customer');
         }
@@ -96,18 +96,18 @@ const submitIISForm = async (req, res) => {
             phone: payload.phone,
             pan_number: payload.pan_number.toUpperCase(),
             address: payload.address,
-            family_income_post_tax: Number(payload.family_income_post_tax) || 0,
-            number_of_dependents: Number(payload.number_of_dependents) || 0,
-            net_annual_income: Number(payload.net_annual_income) || 0,
-            yearly_household_expenses: Number(payload.yearly_household_expenses) || 0,
-            yearly_liabilities: Number(payload.yearly_liabilities) || 0,
-            education_and_parent_support: Number(payload.education_and_parent_support) || 0,
-            yearly_committed_savings: Number(payload.yearly_committed_savings) || 0,
-            self_occupied_home: Number(payload.self_occupied_home) || 0,
-            bank_fd_rd_savings: Number(payload.bank_fd_rd_savings) || 0,
-            mutual_fund_investments: Number(payload.mutual_fund_investments) || 0,
-            health_insurance_independent: Number(payload.health_insurance_independent) || 0,
-            life_insurance_independent: Number(payload.life_insurance_independent) || 0,
+            family_income_post_tax: payload.family_income_post_tax,
+            number_of_dependents: payload.number_of_dependents,
+            net_annual_income: payload.net_annual_income,
+            yearly_household_expenses: payload.yearly_household_expenses,
+            yearly_liabilities: payload.yearly_liabilities,
+            education_and_parent_support: payload.education_and_parent_support,
+            yearly_committed_savings: payload.yearly_committed_savings,
+            self_occupied_home: payload.self_occupied_home,
+            bank_fd_rd_savings: payload.bank_fd_rd_savings,
+            mutual_fund_investments: payload.mutual_fund_investments,
+            health_insurance_independent: payload.health_insurance_independent,
+            life_insurance_independent: payload.life_insurance_independent,
             company_name: payload.company_name,
             job_designation: payload.job_designation,
             job_profile: payload.job_profile,
@@ -205,8 +205,8 @@ const submitIISForm = async (req, res) => {
         });
 
         // Don't expose internal error details in production
-        const errorMessage = process.env.NODE_ENV === 'development' 
-            ? error.message 
+        const errorMessage = process.env.NODE_ENV === 'development'
+            ? error.message
             : 'Failed to submit IIS form';
 
         return res.status(500).json({

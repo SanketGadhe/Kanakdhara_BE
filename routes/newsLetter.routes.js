@@ -2,6 +2,6 @@ const { getAllSubscribers, createSubscriber } = require('../controllers/subscrib
 const express = require('express')
 const router = express.Router()
 
-router.get('/getAllSubscribers', getAllSubscribers)
+router.get('/getAll', getAllSubscribers)
 router.post('/createSubscriber', createSubscriber)
 module.exports = router

@@ -140,7 +140,6 @@ const ReportSchema = new Schema(
             required: true
         },
         assessment: AssessmentSchema,
-
         financialHealthData: FinancialHealthSchema,
         riskProfileData: RiskProfileSchema
     },

@@ -3,6 +3,7 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 
 const connectDB = require("./config/db");
 
@@ -17,7 +18,7 @@ const rateLimit = require("express-rate-limit");
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // limit each IP to 500 requests per windowMs
+  max: process.env.NODE_ENV === 'development' ? 1000 : 500, // limit each IP to 500 requests per windowMs
   message: {
     error: "Too many requests from this IP, please try again later."
   },
@@ -29,7 +30,7 @@ app.use(limiter);
 // Stricter rate limiting for form submissions
 const formLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 form submissions per windowMs
+  max: process.env.NODE_ENV === 'devlopment' ? 1000 : 50, // limit each IP to 100 form submissions per windowMs
   message: {
     error: "Too many form submissions, please try again later."
   }
@@ -42,7 +43,10 @@ const newsLetter = require("./routes/newsLetter.routes");
 // Body parsing with size limits
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "uploads"))
+);
 // CORS configuration
 const allowedOrigins = [
   "https://kanakdharainv.com",
@@ -81,6 +85,13 @@ connectDB();
 /* ======================
    ROUTES
 ====================== */
+app.get("/", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    service: "Kanakdhara Backend",
+    env: process.env.NODE_ENV || "production"
+  });
+});
 app.use("/api/leads/customerInfo", require("./routes/customerInfo.routes"));
 app.use("/api/overall", require("./routes/marketData.routes"));
 app.use("/api/reports", require("./routes/report.routes"));
@@ -92,6 +103,15 @@ app.use("/api/market", require("./routes/market.routes"));
 app.use("/api/newsletter", formLimiter, newsLetter);
 app.use("/api/market-mood", require("./routes/marketMoodIndicator.routes"));
 app.use("/api/job", formLimiter, require("./routes/jobApplication.routes"));
+
+
+// Admin routes
+app.use("/api", require("./routes/adminAuth.routes"));
+app.use("/api/leads/activity", require("./routes/activity.routes"));
+app.use("/api/blog", require("./routes/blog.routes"));
+app.use("/api/documents", require("./routes/document.routes"));
+app.use("/api/mail", require("./routes/mail.routes"));
+
 /* ======================
    ERROR HANDLING
 ====================== */

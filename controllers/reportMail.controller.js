@@ -42,6 +42,9 @@ const sendRiskProfileReport = async (req, res) => {
                 notes
             }
         });
+        await customerModel.findByIdAndUpdate(customerId, {
+            $push: { lastActivity: { time: new Date(), purpose: "risk_assessment", reference: riskProfileReport._id } }
+        });
 
         // Send immediate success response
         res.status(200).json({

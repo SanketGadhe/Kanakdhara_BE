@@ -227,7 +227,7 @@ const getCustomerById = async (req, res) => {
 // Get all customers
 const getAllCustomers = async (req, res) => {
     try {
-        const { page = 1, limit = 10, search } = req.query;
+        const { page = 1, limit = 10, search, sortBy } = req.query;
 
         // Validate pagination parameters
         const pageNum = parseInt(page);
@@ -253,12 +253,15 @@ const getAllCustomers = async (req, res) => {
             };
         }
 
+        // Determine sort order - if sortBy is 'oldDate', sort by oldest first
+        const sortOrder = sortBy === 'oldDate' ? { createdAt: 1 } : { createdAt: -1 };
+
         const skip = (pageNum - 1) * limitNum;
 
         const [customers, totalCount] = await Promise.all([
             customerModel.find(query)
                 .select('-__v')
-                .sort({ createdAt: -1 })
+                .sort(sortOrder)
                 .skip(skip)
                 .limit(limitNum),
             customerModel.countDocuments(query)
