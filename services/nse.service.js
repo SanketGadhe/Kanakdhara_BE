@@ -34,7 +34,6 @@ const fetchWithRetry = async (url, config = {}, retryCount = 0) => {
     } catch (error) {
         if ((error.response?.status === 403 || error.response?.status === 429) && retryCount < MAX_RETRIES) {
             const delay = RETRY_DELAY * Math.pow(2, retryCount);
-            console.warn(`NSE ${url} returned ${error.response.status}, retrying in ${delay}ms...`);
             await sleep(delay);
             return fetchWithRetry(url, config, retryCount + 1);
         }

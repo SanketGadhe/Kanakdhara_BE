@@ -66,22 +66,17 @@ const getMarketTicker = async (req, res) => {
     try {
         /* ---------- Serve cache ---------- */
         if (cachedResponse && Date.now() - lastFetched < CACHE_TTL) {
-            console.log("📦 Serving from cache");
             return res.json(cachedResponse);
         }
-
-        console.log("🔄 Fetching fresh data from NSE...");
 
         /* ---------- Warm up NSE cookies ---------- */
         try {
             await fetchWithRetry("/");
-            console.log("✓ NSE warmup successful");
         } catch (err) {
-            console.warn("⚠️ Warmup failed (non-critical):", err.message);
+            // Warmup failure is non-critical, continue
         }
 
         /* ---------- API calls with retry ---------- */
-        console.log("📡 Making parallel requests to NSE endpoints...");
         const [
             allIndicesRes,
             marketStatusRes,
@@ -93,8 +88,6 @@ const getMarketTicker = async (req, res) => {
                 params: { index: "NIFTY 50" },
             }),
         ]);
-
-        console.log("✓ All NSE endpoints responded successfully");
 
         /* ---------- Market status ---------- */
         const marketState =
@@ -184,34 +177,20 @@ const getMarketTicker = async (req, res) => {
         cachedResponse = response;
         lastFetched = Date.now();
 
-        console.log("✅ Market Ticker data prepared successfully");
         res.json(response);
     } catch (error) {
-        const errorDetails = {
+        console.error("NSE Controller Error:", {
             message: error.message,
             status: error.response?.status,
             statusText: error.response?.statusText,
-            url: error.config?.url,
-        };
-
-        console.error("❌ NSE Controller Error:", errorDetails);
-
-        // Specific error messages for debugging
-        if (error.response?.status === 403) {
-            console.error("🔒 Received 403 Forbidden - NSE may be blocking this IP address");
-            console.error("   Potential fixes:");
-            console.error("   1. Wait a few minutes and retry");
-            console.error("   2. Check if IP is whitelisted in NSE firewall");
-            console.error("   3. Try using a different IP or VPN");
-        } else if (error.response?.status === 429) {
-            console.error("⏱️  Received 429 Too Many Requests - Rate limited");
-        } else if (error.code === 'ECONNABORTED') {
-            console.error("⏱️  Request timeout - NSE server slow or unreachable");
-        }
+        });
 
         res.status(500).json({
             error: "Failed to fetch NSE market data",
-            details: process.env.NODE_ENV === 'development' ? errorDetails : undefined,
+            details: process.env.NODE_ENV === 'development' ? {
+                message: error.message,
+                status: error.response?.status,
+            } : undefined,
         });
     }
 };
