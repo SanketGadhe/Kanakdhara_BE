@@ -12,12 +12,12 @@ exports.getMarketIntelligence = async (req, res) => {
                     error: "Request timeout - market data taking too long to fetch"
                 });
             }
-        }, 25000); // 25 second timeout
+        }, 25000);
 
         const data = await buildMarketIntelligence();
-        
+
         clearTimeout(timeout);
-        
+
         if (!res.headersSent) {
             res.json({
                 success: true,
