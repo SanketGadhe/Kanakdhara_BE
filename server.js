@@ -12,28 +12,77 @@ const app = express();
 // Trust proxy for deployment platforms (Render, Heroku, etc.)
 app.set('trust proxy', 1);
 
-// Security middleware
+// =====================================================
+// CORS MUST be FIRST — before rate limiter!
+// If rate limiter responds before CORS, browsers silently
+// drop the response (no Access-Control-Allow-Origin header).
+// This causes "provisional headers shown" + empty response.
+// =====================================================
+const allowedOrigins = [
+  "https://kanakdharainv.com",
+  "https://www.kanakdharainv.com",
+  "https://admin.kanakdharainv.com"
+  // NOTE: Origins never include paths. The page URL
+  // https://kanakdharainv.com/836defd4-... sends origin
+  // https://kanakdharainv.com (already listed above).
+];
+
+// Add localhost in development
+if (process.env.NODE_ENV === 'development') {
+  allowedOrigins.push("http://localhost:3000");
+  allowedOrigins.push("http://localhost:5173");
+}
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (mobile apps, curl, server-to-server)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        console.warn(`CORS blocked origin: ${origin}`);
+        callback(null, false);
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  })
+);
+
+// =====================================================
+// Rate Limiting (AFTER CORS so blocked responses still
+// have CORS headers and browsers can read them)
+// =====================================================
 const rateLimit = require("express-rate-limit");
 
-// Rate limiting
+// Accept both 'development' and legacy 'devlopment' typo in .env
+const isDevOrTest = ['development', 'devlopment'].includes(process.env.NODE_ENV);
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'development' ? 1000 : 500,
+  max: isDevOrTest ? 1000 : 500,
   message: {
     error: "Too many requests from this IP, please try again later."
   },
   standardHeaders: true,
   legacyHeaders: false,
+  // Don't count OPTIONS preflight requests against the limit
+  skip: (req) => req.method === 'OPTIONS',
 });
 app.use(limiter);
 
 // Stricter rate limiting for form submissions
 const formLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'development' ? 1000 : 50, // Fixed typo: was 'devlopment'
+  windowMs: 15 * 60 * 1000,
+  max: isDevOrTest ? 1000 : 50,
   message: {
     error: "Too many form submissions, please try again later."
-  }
+  },
+  // Don't count OPTIONS preflight against form limit
+  skip: (req) => req.method === 'OPTIONS',
 });
 
 const newsLetter = require("./routes/newsLetter.routes");
@@ -47,41 +96,6 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(
   "/uploads",
   express.static(path.join(__dirname, "uploads"))
-);
-
-// CORS configuration
-const allowedOrigins = [
-  "https://kanakdharainv.com",
-  "https://www.kanakdharainv.com",
-  "https://admin.kanakdharainv.com",
-  "https://kanakdharainv.com/836defd4-a223-4a58-a59a-5acda484755a"
-];
-
-// Add localhost only in development
-if (process.env.NODE_ENV === 'development') {
-  allowedOrigins.push("http://localhost:3000");
-  allowedOrigins.push("http://localhost:5173");
-}
-
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps, curl, or server-to-server)
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        // IMPORTANT: Don't throw Error — just reject with false.
-        // Throwing new Error() crashes Express 5 and sends 500 instead of CORS rejection.
-        console.warn(`CORS blocked origin: ${origin}`);
-        callback(null, false);
-      }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-  })
 );
 
 /* ======================
@@ -193,6 +207,6 @@ process.on('uncaughtException', (error) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 API running on port ${PORT}`);
+  console.log(`API running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
