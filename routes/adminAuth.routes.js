@@ -11,7 +11,7 @@ const { protectAdmin } = require("../middleware/auth.middleware");
 // 🔓 Public
 router.post("/admin/login", loginAdmin);
 
-// 🔐 Protected
-router.post("/admin/createAdmin", createAdmin);
+// 🔐 Protected — requires admin auth
+router.post("/admin/createAdmin", protectAdmin, createAdmin);
 
 module.exports = router;

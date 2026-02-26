@@ -1,57 +1,10 @@
-const axios = require("axios");
-
-const NSE_BASE = "https://www.nseindia.com";
-
-/* ---------------- Axios Instance with Anti-Bot Headers ---------------- */
-
-const axiosNSE = axios.create({
-    baseURL: NSE_BASE,
-    timeout: 15000,
-    headers: {
-        "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Referer": "https://www.nseindia.com/",
-        "Connection": "keep-alive",
-        "Sec-Fetch-Dest": "empty",
-        "Sec-Fetch-Mode": "cors",
-        "Sec-Fetch-Site": "same-origin",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
-    },
-    withCredentials: true,
-});
-
-/* ---------------- Retry Configuration ---------------- */
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
-
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const { nseGet } = require("../services/nseClient");
 
 /* ---------------- Cache ---------------- */
 
 let cachedResponse = null;
 let lastFetched = 0;
 const CACHE_TTL = 60 * 1000; // 1 minute
-
-/* ---------------- Retry Helper with Exponential Backoff ---------------- */
-
-const fetchWithRetry = async (url, config = {}, retryCount = 0) => {
-    try {
-        return await axiosNSE.get(url, config);
-    } catch (error) {
-        // Don't retry on 403/429 immediately, wait longer
-        if ((error.response?.status === 403 || error.response?.status === 429) && retryCount < MAX_RETRIES) {
-            const delay = RETRY_DELAY * Math.pow(2, retryCount); // Exponential backoff: 1s, 2s, 4s
-            console.warn(`NSE returned ${error.response.status}, retrying after ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
-            await sleep(delay);
-            return fetchWithRetry(url, config, retryCount + 1);
-        }
-        throw error;
-    }
-};
 
 /* ---------------- Helpers ---------------- */
 
@@ -69,22 +22,15 @@ const getMarketTicker = async (req, res) => {
             return res.json(cachedResponse);
         }
 
-        /* ---------- Warm up NSE cookies ---------- */
-        try {
-            await fetchWithRetry("/");
-        } catch (err) {
-            // Warmup failure is non-critical, continue
-        }
-
-        /* ---------- API calls with retry ---------- */
+        /* ---------- API calls (nseClient handles cookies + retry) ---------- */
         const [
             allIndicesRes,
             marketStatusRes,
             nifty50StocksRes
         ] = await Promise.all([
-            fetchWithRetry("/api/allIndices"),
-            fetchWithRetry("/api/marketStatus"),
-            fetchWithRetry("/api/equity-stockIndices", {
+            nseGet("/api/allIndices"),
+            nseGet("/api/marketStatus"),
+            nseGet("/api/equity-stockIndices", {
                 params: { index: "NIFTY 50" },
             }),
         ]);

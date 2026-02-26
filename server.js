@@ -18,7 +18,7 @@ const rateLimit = require("express-rate-limit");
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'development' ? 1000 : 500, // limit each IP to 500 requests per windowMs
+  max: process.env.NODE_ENV === 'development' ? 1000 : 500,
   message: {
     error: "Too many requests from this IP, please try again later."
   },
@@ -30,13 +30,14 @@ app.use(limiter);
 // Stricter rate limiting for form submissions
 const formLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'devlopment' ? 1000 : 50, // limit each IP to 100 form submissions per windowMs
+  max: process.env.NODE_ENV === 'development' ? 1000 : 50, // Fixed typo: was 'devlopment'
   message: {
     error: "Too many form submissions, please try again later."
   }
 });
 
 const newsLetter = require("./routes/newsLetter.routes");
+
 /* ======================
    MIDDLEWARE
 ====================== */
@@ -47,11 +48,11 @@ app.use(
   "/uploads",
   express.static(path.join(__dirname, "uploads"))
 );
+
 // CORS configuration
 const allowedOrigins = [
   "https://kanakdharainv.com",
   "https://www.kanakdharainv.com",
-  "http://localhost:3000",
   "https://admin.kanakdharainv.com",
   "https://kanakdharainv.com/836defd4-a223-4a58-a59a-5acda484755a"
 ];
@@ -59,18 +60,22 @@ const allowedOrigins = [
 // Add localhost only in development
 if (process.env.NODE_ENV === 'development') {
   allowedOrigins.push("http://localhost:3000");
+  allowedOrigins.push("http://localhost:5173");
 }
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
+      // Allow requests with no origin (like mobile apps, curl, or server-to-server)
       if (!origin) return callback(null, true);
 
       if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        // IMPORTANT: Don't throw Error — just reject with false.
+        // Throwing new Error() crashes Express 5 and sends 500 instead of CORS rejection.
+        console.warn(`CORS blocked origin: ${origin}`);
+        callback(null, false);
       }
     },
     credentials: true,
@@ -85,6 +90,17 @@ app.use(
 connectDB();
 
 /* ======================
+   HEALTH CHECK (before routes so it's always reachable)
+====================== */
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
+/* ======================
    ROUTES
 ====================== */
 app.get("/", (req, res) => {
@@ -94,6 +110,8 @@ app.get("/", (req, res) => {
     env: process.env.NODE_ENV || "production"
   });
 });
+
+// Public routes
 app.use("/api/leads/customerInfo", require("./routes/customerInfo.routes"));
 app.use("/api/overall", require("./routes/marketData.routes"));
 app.use("/api/reports", require("./routes/report.routes"));
@@ -105,7 +123,6 @@ app.use("/api/market", require("./routes/market.routes"));
 app.use("/api/newsletter", formLimiter, newsLetter);
 app.use("/api/market-mood", require("./routes/marketMoodIndicator.routes"));
 app.use("/api/job", formLimiter, require("./routes/jobApplication.routes"));
-
 
 // Admin routes
 app.use("/api", require("./routes/adminAuth.routes"));
@@ -121,32 +138,28 @@ app.use("/api/mail", require("./routes/mail.routes"));
 app.use((req, res, next) => {
   res.status(404).json({
     success: false,
-    message: 'Route not found'
+    message: `Route not found: ${req.method} ${req.originalUrl}`
   });
 });
 
-// Global error handler
+// Global error handler (must have 4 params for Express to treat it as error middleware)
 app.use((err, req, res, next) => {
   console.error('Global error:', {
     message: err.message,
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    path: req.originalUrl,
+    method: req.method,
     timestamp: new Date().toISOString()
   });
+
+  // Don't send response if headers already sent
+  if (res.headersSent) {
+    return next(err);
+  }
 
   res.status(err.status || 500).json({
     success: false,
     message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
-  });
-});
-
-/* ======================
-   HEALTH CHECK
-====================== */
-app.get("/health", (req, res) => {
-  res.status(200).json({
-    status: "OK",
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
   });
 });
 
@@ -169,26 +182,15 @@ process.on('SIGINT', () => {
 // Prevent server from crashing on unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  // Don't exit in production, just log the error
-  if (process.env.NODE_ENV === 'development') {
-    process.exit(1);
-  }
 });
 
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
-  process.exit(1);
-});
-
-process.on('tooManyRequest',
-  (req, res) => {
-    console.error('Too many requests from this IP, please try again later.');
-    res.status(429).json({
-      success: false,
-      message: 'Too many requests, please try again later.'
-    });
+  // In production, log but don't crash for recoverable errors
+  if (process.env.NODE_ENV === 'development') {
+    process.exit(1);
   }
-)
+});
 
 app.listen(PORT, () => {
   console.log(`🚀 API running on port ${PORT}`);

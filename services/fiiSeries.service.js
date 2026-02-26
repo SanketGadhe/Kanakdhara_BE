@@ -1,11 +1,7 @@
-const axios = require("axios");
-const { headers } = require("../utils/nseHeaders");
+const { nseGet } = require("./nseClient");
 
 exports.getFIISeries = async (days = 30) => {
-    const res = await axios.get(
-        "https://www.nseindia.com/api/fiidiiTradeReact",
-        { headers }
-    );
+    const res = await nseGet("/api/fiidiiTradeReact");
 
     return res.data
         .filter(d => d.category === "FII/FPI")

@@ -1,13 +1,18 @@
 const fs = require("fs");
 const path = require("path");
-const { calculateMMI } = require("./mmi.service");
 const {
     getFIIDII,
     getVIX,
     getMarketDirection
 } = require("./nse.service");
 
-const DATA_FILE = path.join(__dirname, "../data/mmi-history.json");
+const DATA_DIR = path.join(__dirname, "../data");
+const DATA_FILE = path.join(DATA_DIR, "mmi-history.json");
+
+// Ensure data directory exists
+if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+}
 
 exports.calculateMMI = ({ fiiNet, vix, niftyChange }) => {
     // Normalize components
@@ -81,7 +86,7 @@ exports.storeDailyMMI = async () => {
             getMarketDirection()
         ]);
 
-        const mmi = calculateMMI({
+        const mmi = exports.calculateMMI({
             fiiNet: flow.fii.net,
             vix,
             niftyChange: market.percentChange

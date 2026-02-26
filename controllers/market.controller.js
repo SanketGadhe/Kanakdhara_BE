@@ -51,19 +51,25 @@ exports.getDashboard = async (req, res) => {
     }
 };
 exports.getMMITrend = (req, res) => {
-    // try {
-    const range = req.query.range || "1Y";
-    const data = getMMISeries(range);
-    return res.json({
-        range,
-        data
-    });
-    // } catch (e) {
-    //     res.status(500).json({ error: "MMI series failed", resopnse: e });
-    // }
+    try {
+        const range = req.query.range || "1Y";
+        const data = getMMISeries(range);
+        return res.json({
+            range,
+            data
+        });
+    } catch (e) {
+        console.error("MMI series failed:", e);
+        res.status(500).json({ error: "MMI series failed" });
+    }
 };
 exports.getFIISeries = async (req, res) => {
-    const days = Number(req.query.days || 30);
-    const data = await getFIISeries(days);
-    res.json({ data });
+    try {
+        const days = Number(req.query.days || 30);
+        const data = await getFIISeries(days);
+        res.json({ data });
+    } catch (e) {
+        console.error("FII series failed:", e);
+        res.status(500).json({ error: "FII series failed" });
+    }
 };

@@ -10,10 +10,13 @@ const connectDB = async () => {
         console.log("🔗 Connecting to MongoDB...");
 
         const conn = await mongoose.connect(process.env.MONGODB_URL, {
-            maxPoolSize: 10, // Maintain up to 10 socket connections
-            serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
-            socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-            bufferCommands: false, // Disable mongoose buffering
+            maxPoolSize: 10,
+            minPoolSize: 2,
+            serverSelectionTimeoutMS: 10000,
+            socketTimeoutMS: 60000,
+            heartbeatFrequencyMS: 30000,
+            retryWrites: true,
+            retryReads: true,
         });
 
         console.log(`✅ MongoDB Connected: ${conn.connection.host}`);

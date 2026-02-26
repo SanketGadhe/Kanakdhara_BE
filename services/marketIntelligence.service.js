@@ -3,21 +3,8 @@ const {
     getMarketDirection,
     getMarketForNifty
 } = require("./nse.service");
-const axios = require('axios')
 const { getNifty50AdvanceDecline } = require("./marketBreadth.service");
 const { getMMIZone } = require("./mmi.service");
-const axiosNSE = axios.create({
-    baseURL: "https://www.nseindia.com/",
-    timeout: 100000,
-    headers: {
-        "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        Accept: "application/json",
-        Referer: "https://www.nseindia.com",
-        Connection: "keep-alive",
-    },
-    withCredentials: true,
-});
 
 function classifyTrend(pChange) {
     if (pChange > 0.3) return "Positive";
@@ -87,7 +74,7 @@ const buildMarketIntelligence = async () => {
             getNifty50AdvanceDecline()
         ]);
 
-        const [vix, market, nifty_500_summary, nifty_bank_summary, niftyIT, breadth] = 
+        const [vix, market, nifty_500_summary, nifty_bank_summary, niftyIT, breadth] =
             await Promise.race([marketDataPromise, timeoutPromise]);
 
         const sentimentScore = calculateSentimentScore({
