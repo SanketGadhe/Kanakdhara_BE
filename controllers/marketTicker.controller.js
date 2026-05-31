@@ -1,4 +1,5 @@
 const { nseGet } = require("../services/nseClient");
+const { getAllIndicesData } = require("../services/nse.service");
 
 let cachedResponse = null;
 let lastFetched = 0;
@@ -122,15 +123,11 @@ const getMarketTicker = async (req, res) => {
             return res.json(cachedResponse);
         }
 
-        const [allIndicesRes, marketStatusRes, stockResult] = await Promise.all([
-            nseGet("/api/allIndices"),
+        const [allIndices, marketStatusRes, stockResult] = await Promise.all([
+            getAllIndicesData(),
             fetchMarketStatus(),
             fetchNifty50Stocks(),
         ]);
-
-        const allIndices = Array.isArray(allIndicesRes.data?.data)
-            ? allIndicesRes.data.data
-            : [];
 
         if (!allIndices.length) {
             throw new Error("NSE allIndices returned no index data");
@@ -215,7 +212,7 @@ const getMarketTicker = async (req, res) => {
             return res.json(staleResponse);
         }
 
-        return res.status(503).json({
+        return res.status(200).json({
             marketStatus: "UNAVAILABLE",
             indices: [],
             stocks: [],

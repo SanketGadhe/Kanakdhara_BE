@@ -45,12 +45,11 @@ const attachLikeCounts = async (blogs) => {
 
     return blogs.map((blog) => {
         const serializedBlog = serializeBlog(blog);
-        const likeCount = countByBlogId.get(String(blog._id)) || 0;
+        const likesCount = countByBlogId.get(String(blog._id)) || 0;
 
         return {
             ...serializedBlog,
-            likeCount,
-            likes: likeCount,
+            likesCount,
         };
     });
 };

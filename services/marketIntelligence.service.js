@@ -51,6 +51,58 @@ function calculateSentimentScore({
 
     return Math.max(0, Math.min(100, score));
 }
+
+function createUnavailableIndexSummary(index) {
+    return {
+        last: null,
+        change: null,
+        index,
+        percentChange: null,
+        tradeDate: null,
+        advances: null,
+        declines: null,
+        unchanged: null,
+        marketStatus: "UNAVAILABLE",
+    };
+}
+
+const UNAVAILABLE_BREADTH = {
+    advances: null,
+    declines: null,
+    unchanged: null,
+    ratio: null,
+    status: "Unavailable",
+};
+
+function getSettledValue(results, index, fallback, label) {
+    const result = results[index];
+
+    if (result?.status === "fulfilled") {
+        return result.value;
+    }
+
+    if (result?.status === "rejected") {
+        console.warn(`[Market Intelligence] ${label} unavailable:`, result.reason?.message);
+    }
+
+    return fallback;
+}
+
+function buildReasonForTrend(percentChange) {
+    if (!Number.isFinite(percentChange)) {
+        return "NIFTY movement is unavailable from the upstream market data provider.";
+    }
+
+    return `NIFTY moved ${percentChange}% today.`;
+}
+
+function buildReasonForVIX(vix, risk) {
+    if (!Number.isFinite(vix)) {
+        return "VIX is unavailable from the upstream market data provider.";
+    }
+
+    return `VIX at ${vix} suggests ${risk.toLowerCase()} risk.`;
+}
 // function AdvanceDeclineNifty() {
 //     axiosNSE.get("/api/equity-stockIndices", {
 //         params: { index: "NIFTY 50" },
@@ -66,12 +118,11 @@ function calculateSentimentScore({
 
 const buildMarketIntelligence = async () => {
     try {
-        // Add timeout wrapper for all external API calls
-        const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Market intelligence timeout')), 20000);
+        const timeoutPromise = new Promise((resolve) => {
+            setTimeout(() => resolve({ timedOut: true }), 20000);
         });
 
-        const marketDataPromise = Promise.all([
+        const marketDataPromise = Promise.allSettled([
             getVIX(),
             getMarketDirection(),
             getMarketForNifty("NIFTY 500"),
@@ -80,8 +131,44 @@ const buildMarketIntelligence = async () => {
             getNifty50AdvanceDecline()
         ]);
 
-        const [vix, market, nifty_500_summary, nifty_bank_summary, niftyIT, breadth] =
-            await Promise.race([marketDataPromise, timeoutPromise]);
+        const results = await Promise.race([marketDataPromise, timeoutPromise]);
+
+        if (results.timedOut) {
+            console.warn("[Market Intelligence] Timed out while fetching market data");
+        }
+
+        const settledResults = Array.isArray(results) ? results : [];
+        const vix = getSettledValue(settledResults, 0, null, "VIX");
+        const market = getSettledValue(
+            settledResults,
+            1,
+            createUnavailableIndexSummary("NIFTY 50"),
+            "NIFTY 50"
+        );
+        const nifty_500_summary = getSettledValue(
+            settledResults,
+            2,
+            createUnavailableIndexSummary("NIFTY 500"),
+            "NIFTY 500"
+        );
+        const nifty_bank_summary = getSettledValue(
+            settledResults,
+            3,
+            createUnavailableIndexSummary("NIFTY BANK"),
+            "NIFTY BANK"
+        );
+        const niftyIT = getSettledValue(
+            settledResults,
+            4,
+            createUnavailableIndexSummary("NIFTY IT"),
+            "NIFTY IT"
+        );
+        const breadth = getSettledValue(
+            settledResults,
+            5,
+            UNAVAILABLE_BREADTH,
+            "NIFTY 50 breadth"
+        );
 
         const sentimentScore = calculateSentimentScore({
             niftyChange: market.percentChange,
@@ -131,7 +218,7 @@ const buildMarketIntelligence = async () => {
                     trend_strength: {
                         status: classifyTrend(market.percentChange),
                         value: market.percentChange,
-                        reason: `NIFTY moved ${market.percentChange}% today.`,
+                        reason: buildReasonForTrend(market.percentChange),
                     },
 
                     market_breadth: {
@@ -146,7 +233,7 @@ const buildMarketIntelligence = async () => {
                     volatility_vix: {
                         status: vixInsight.label,
                         value: vix,
-                        reason: `VIX at ${vix} suggests ${vixInsight.risk.toLowerCase()} risk.`,
+                        reason: buildReasonForVIX(vix, vixInsight.risk),
                     },
 
                 },

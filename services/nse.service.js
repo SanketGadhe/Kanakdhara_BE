@@ -1,10 +1,15 @@
 const { nseGet } = require("./nseClient");
+const fs = require("fs");
+const path = require("path");
 
 const ALL_INDICES_CACHE_TTL = 30 * 1000;
+const DATA_DIR = path.join(__dirname, "../data");
+const ALL_INDICES_CACHE_FILE = path.join(DATA_DIR, "nse-all-indices-cache.json");
 
 let allIndicesCache = null;
 let allIndicesFetchedAt = 0;
 let allIndicesPromise = null;
+let diskCacheLoaded = false;
 
 const toNumber = (value, fallback = null) => {
     const normalized =
@@ -53,6 +58,7 @@ async function fetchAllIndicesData() {
 
         allIndicesCache = data;
         allIndicesFetchedAt = Date.now();
+        persistAllIndicesCache(data);
         return data;
     } catch (err) {
         if (allIndicesCache) {
@@ -60,7 +66,60 @@ async function fetchAllIndicesData() {
             return allIndicesCache;
         }
 
+        const diskCache = readAllIndicesCacheFromDisk();
+        if (diskCache) {
+            console.warn("[NSE] Using persisted allIndices cache:", err.message);
+            return diskCache;
+        }
+
         throw err;
+    }
+}
+
+function readAllIndicesCacheFromDisk() {
+    if (diskCacheLoaded) {
+        return allIndicesCache;
+    }
+
+    diskCacheLoaded = true;
+
+    try {
+        if (!fs.existsSync(ALL_INDICES_CACHE_FILE)) {
+            return null;
+        }
+
+        const raw = fs.readFileSync(ALL_INDICES_CACHE_FILE, "utf8");
+        const parsed = JSON.parse(raw);
+
+        if (!Array.isArray(parsed.data) || !parsed.data.length) {
+            return null;
+        }
+
+        allIndicesCache = parsed.data;
+        allIndicesFetchedAt = Number(parsed.fetchedAt) || 0;
+        return allIndicesCache;
+    } catch (err) {
+        console.warn("[NSE] Failed to read persisted allIndices cache:", err.message);
+        return null;
+    }
+}
+
+function persistAllIndicesCache(data) {
+    try {
+        if (!fs.existsSync(DATA_DIR)) {
+            fs.mkdirSync(DATA_DIR, { recursive: true });
+        }
+
+        const payload = {
+            fetchedAt: allIndicesFetchedAt,
+            data,
+        };
+        const tempFile = `${ALL_INDICES_CACHE_FILE}.tmp`;
+
+        fs.writeFileSync(tempFile, JSON.stringify(payload));
+        fs.renameSync(tempFile, ALL_INDICES_CACHE_FILE);
+    } catch (err) {
+        console.warn("[NSE] Failed to persist allIndices cache:", err.message);
     }
 }
 
