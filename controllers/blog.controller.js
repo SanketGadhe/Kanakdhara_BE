@@ -1,5 +1,22 @@
 const Blog = require("../models/Blog.model");
 
+const normalizeTagline = (tagline) => {
+    if (typeof tagline !== "string" || !tagline.trim()) {
+        return Blog.defaultTagline;
+    }
+
+    return tagline.trim();
+};
+
+const serializeBlog = (blog) => {
+    const data = typeof blog.toObject === "function" ? blog.toObject() : blog;
+
+    return {
+        ...data,
+        tagline: normalizeTagline(data.tagline),
+    };
+};
+
 /**
  * CREATE BLOG
  * POST /blogs
@@ -11,6 +28,7 @@ exports.createBlog = async (req, res) => {
             category,
             desc,
             author,
+            tagline,
             date,
             htmlContent,
         } = req.body;
@@ -26,13 +44,14 @@ exports.createBlog = async (req, res) => {
             category,
             desc,
             author,
+            tagline: normalizeTagline(tagline),
             date,
             htmlContent,
             image: `/uploads/blogs/${req.file.filename}`,
         });
 
         return res.status(201).json({
-            data: blog,
+            data: serializeBlog(blog),
             status: 201,
         });
     } catch (err) {
@@ -61,6 +80,7 @@ exports.updateBlog = async (req, res) => {
             category,
             desc,
             author,
+            tagline,
             date,
             htmlContent,
             isPublished,
@@ -70,6 +90,9 @@ exports.updateBlog = async (req, res) => {
         blog.category = category ?? blog.category;
         blog.desc = desc ?? blog.desc;
         blog.author = author ?? blog.author;
+        if (tagline !== undefined) {
+            blog.tagline = normalizeTagline(tagline);
+        }
         blog.date = date ?? blog.date;
         blog.htmlContent = htmlContent ?? blog.htmlContent;
         blog.isPublished =
@@ -83,7 +106,7 @@ exports.updateBlog = async (req, res) => {
         await blog.save();
 
         return res.status(200).json({
-            data: blog,
+            data: serializeBlog(blog),
             status: 200,
         });
     } catch (err) {
@@ -101,7 +124,7 @@ exports.getAllBlogs = async (req, res) => {
         .select("-htmlContent")
         .sort({ createdAt: -1 });
 
-    res.status(200).json({ data: blogs });
+    res.status(200).json({ data: blogs.map(serializeBlog) });
 };
 
 /**
@@ -112,5 +135,5 @@ exports.getBlogById = async (req, res) => {
     if (!blog)
         return res.status(404).json({ error: "Not found" });
 
-    res.status(200).json({ data: blog });
+    res.status(200).json({ data: serializeBlog(blog) });
 };

@@ -3,9 +3,11 @@ const {
 } = require("../services/marketIntelligence.service");
 
 exports.getMarketIntelligence = async (req, res) => {
+    let timeout;
+
     try {
         // Set response timeout to prevent SIGTERM
-        const timeout = setTimeout(() => {
+        timeout = setTimeout(() => {
             if (!res.headersSent) {
                 res.status(408).json({
                     success: false,
@@ -17,6 +19,7 @@ exports.getMarketIntelligence = async (req, res) => {
         const data = await buildMarketIntelligence();
 
         clearTimeout(timeout);
+        timeout = null;
 
         if (!res.headersSent) {
             res.json({
@@ -25,6 +28,8 @@ exports.getMarketIntelligence = async (req, res) => {
             });
         }
     } catch (err) {
+        if (timeout) clearTimeout(timeout);
+
         console.error("Market Intelligence API failed", err);
         if (!res.headersSent) {
             res.status(500).json({

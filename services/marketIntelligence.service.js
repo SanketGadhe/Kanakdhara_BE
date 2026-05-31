@@ -7,18 +7,24 @@ const { getNifty50AdvanceDecline } = require("./marketBreadth.service");
 const { getMMIZone } = require("./mmi.service");
 
 function classifyTrend(pChange) {
+    if (!Number.isFinite(pChange)) return "Unavailable";
     if (pChange > 0.3) return "Positive";
     if (pChange < -0.3) return "Negative";
     return "Neutral";
 }
 
 function interpretVIX(vix) {
+    if (!Number.isFinite(vix)) {
+        return { label: "Unavailable", risk: "Unknown" };
+    }
+
     if (vix < 12) return { label: "Complacent/Stable", risk: "Low" };
     if (vix < 18) return { label: "Normal", risk: "Moderate" };
     return { label: "Elevated", risk: "High" };
 }
 
 function interpretBreadth(ratio) {
+    if (!Number.isFinite(ratio)) return "Unavailable";
     if (ratio >= 1.5) return "Bullish";
     if (ratio >= 1.0) return "Neutral";
     return "Bearish";
@@ -32,16 +38,16 @@ function calculateSentimentScore({
     let score = 50;
 
     // Trend contribution
-    if (niftyChange > 0) score += 10;
-    if (niftyChange < 0) score -= 10;
+    if (Number.isFinite(niftyChange) && niftyChange > 0) score += 10;
+    if (Number.isFinite(niftyChange) && niftyChange < 0) score -= 10;
 
     // Breadth contribution
-    if (breadthRatio >= 1.5) score += 15;
-    else if (breadthRatio < 1) score -= 15;
+    if (Number.isFinite(breadthRatio) && breadthRatio >= 1.5) score += 15;
+    else if (Number.isFinite(breadthRatio) && breadthRatio < 1) score -= 15;
 
     // Volatility contribution
-    if (vix < 12) score += 10;
-    if (vix > 20) score -= 15;
+    if (Number.isFinite(vix) && vix < 12) score += 10;
+    if (Number.isFinite(vix) && vix > 20) score -= 15;
 
     return Math.max(0, Math.min(100, score));
 }
@@ -88,7 +94,7 @@ const buildMarketIntelligence = async () => {
         return {
             api_source_data: {
                 market_status: {
-                    status: "Closed",
+                    status: market.marketStatus || "UNKNOWN",
                     trade_date: market.tradeDate,
                     market_cap_status: "Normal",
                 },

@@ -1,39 +1,40 @@
 /**
- * Shared NSE HTTP Client with Cookie Management
- * 
- * NSE India requires valid session cookies from an initial page visit.
- * This module manages a single shared axios instance with:
- * - Automatic cookie capture from NSE homepage
- * - Cookie reuse across all API calls
- * - Periodic cookie refresh before expiry
- * - Retry with exponential backoff on 403/429
- * - Request queuing to avoid overwhelming NSE
+ * Shared NSE HTTP client with cookie management.
+ *
+ * NSE India protects some API routes behind browser session cookies. This
+ * client keeps that behavior centralized so controllers can handle degraded
+ * upstream data consistently.
  */
 
 const axios = require("axios");
 
-/* ===== Configuration ===== */
 const NSE_BASE = "https://www.nseindia.com";
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1500;
-const COOKIE_REFRESH_INTERVAL = 4 * 60 * 1000; // Refresh cookies every 4 minutes
-const REQUEST_THROTTLE_MS = 300; // Min gap between requests
+const COOKIE_REFRESH_INTERVAL = 4 * 60 * 1000;
+const REQUEST_THROTTLE_MS = 300;
+const WARMUP_PATHS = [
+    "/market-data/live-equity-market?symbol=NIFTY%2050",
+    "/market-data/live-market-indices",
+    "/",
+];
+const SESSION_RECOVERABLE_STATUSES = new Set([401, 403, 404, 429]);
+const TRANSIENT_STATUSES = new Set([500, 502, 503, 504]);
 
-/* ===== State ===== */
 let cookies = "";
 let lastCookieRefresh = 0;
 let lastRequestTime = 0;
 let cookieRefreshPromise = null;
+let requestQueue = Promise.resolve();
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/* ===== Axios Instance ===== */
 const nseAxios = axios.create({
     baseURL: NSE_BASE,
     timeout: 15000,
     headers: {
         "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
         "Accept-Encoding": "gzip, deflate, br",
@@ -43,84 +44,85 @@ const nseAxios = axios.create({
     },
 });
 
-/* ===== Cookie Management ===== */
-
-/**
- * Visit NSE homepage to capture session cookies.
- * Uses a deduplication promise so concurrent callers share one request.
- */
 async function refreshCookies() {
-    // If a refresh is already in progress, wait for it
     if (cookieRefreshPromise) {
         return cookieRefreshPromise;
     }
 
     cookieRefreshPromise = (async () => {
-        try {
-            const response = await nseAxios.get("/", {
-                headers: {
-                    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                    Referer: "https://www.google.com/",
-                },
-                maxRedirects: 5,
-                validateStatus: (status) => status < 400,
-            });
+        for (const path of WARMUP_PATHS) {
+            try {
+                const response = await nseAxios.get(path, {
+                    headers: {
+                        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                        Referer: "https://www.google.com/",
+                        "Sec-Fetch-Dest": "document",
+                        "Sec-Fetch-Mode": "navigate",
+                        "Sec-Fetch-Site": "cross-site",
+                    },
+                    maxRedirects: 5,
+                    validateStatus: (status) => status < 400,
+                });
 
-            const setCookieHeaders = response.headers["set-cookie"];
-            if (setCookieHeaders && setCookieHeaders.length > 0) {
-                cookies = setCookieHeaders
-                    .map((c) => c.split(";")[0])
-                    .join("; ");
+                const setCookieHeaders = response.headers["set-cookie"];
+                if (!setCookieHeaders || setCookieHeaders.length === 0) {
+                    console.warn(`[NSE] No cookies received from warmup path ${path}`);
+                    continue;
+                }
+
+                cookies = setCookieHeaders.map((c) => c.split(";")[0]).join("; ");
                 lastCookieRefresh = Date.now();
-                console.log("[NSE] Cookies refreshed successfully");
-            } else {
-                console.warn("[NSE] No cookies received from homepage");
+                console.log(`[NSE] Cookies refreshed successfully via ${path}`);
+                return;
+            } catch (err) {
+                console.warn(`[NSE] Cookie warmup failed for ${path}:`, err.message);
             }
-        } catch (err) {
-            console.error("[NSE] Cookie refresh failed:", err.message);
-            // Don't throw — let caller proceed with stale/empty cookies
-        } finally {
-            cookieRefreshPromise = null;
         }
-    })();
+
+        console.error("[NSE] Cookie refresh failed for all warmup paths");
+    })().finally(() => {
+        cookieRefreshPromise = null;
+    });
 
     return cookieRefreshPromise;
 }
 
-/**
- * Ensure we have valid cookies (refresh if stale or missing)
- */
 async function ensureCookies() {
     if (!cookies || Date.now() - lastCookieRefresh > COOKIE_REFRESH_INTERVAL) {
         await refreshCookies();
     }
 }
 
-/* ===== Throttled Request ===== */
-
-/**
- * Make a GET request to NSE API with cookie management and retry logic.
- * @param {string} url - API path (e.g., "/api/allIndices")
- * @param {object} config - Additional axios config (params, etc.)
- * @returns {Promise<object>} - Axios response
- */
 async function nseGet(url, config = {}) {
     await ensureCookies();
 
-    // Throttle requests
+    const { nseMaxRetries = MAX_RETRIES, ...axiosConfig } = config;
+
+    return enqueueRequest(() => fetchWithRetry(url, axiosConfig, 0, nseMaxRetries));
+}
+
+function enqueueRequest(requestFn) {
+    const queuedRequest = requestQueue.then(async () => {
+        await waitForRequestSlot();
+        return requestFn();
+    });
+
+    requestQueue = queuedRequest.catch(() => {});
+    return queuedRequest;
+}
+
+async function waitForRequestSlot() {
     const now = Date.now();
     const timeSinceLastRequest = now - lastRequestTime;
     if (timeSinceLastRequest < REQUEST_THROTTLE_MS) {
         await sleep(REQUEST_THROTTLE_MS - timeSinceLastRequest);
     }
     lastRequestTime = Date.now();
-
-    return fetchWithRetry(url, config, 0);
 }
 
-async function fetchWithRetry(url, config, retryCount) {
+async function fetchWithRetry(url, config, retryCount, maxRetries) {
     try {
-        const response = await nseAxios.get(url, {
+        return await nseAxios.get(url, {
             ...config,
             headers: {
                 ...config.headers,
@@ -132,29 +134,32 @@ async function fetchWithRetry(url, config, retryCount) {
                 Cookie: cookies,
             },
         });
-        return response;
     } catch (error) {
         const status = error.response?.status;
+        const isSessionRecoverable = SESSION_RECOVERABLE_STATUSES.has(status);
+        const isTransient = !status || TRANSIENT_STATUSES.has(status);
+        const shouldRetry =
+            retryCount < maxRetries && (isSessionRecoverable || isTransient);
 
-        if ((status === 403 || status === 429) && retryCount < MAX_RETRIES) {
+        if (shouldRetry) {
             console.warn(
-                `[NSE] ${status} on ${url}, refreshing cookies and retrying (${retryCount + 1}/${MAX_RETRIES})...`
+                `[NSE] ${status || error.code || "network"} on ${url}, retrying (${retryCount + 1}/${maxRetries})...`
             );
 
-            // Force cookie refresh on 403
-            cookies = "";
-            lastCookieRefresh = 0;
-            await refreshCookies();
+            if (isSessionRecoverable) {
+                cookies = "";
+                lastCookieRefresh = 0;
+                await refreshCookies();
+            }
 
-            const delay = RETRY_DELAY * Math.pow(2, retryCount);
-            await sleep(delay);
-
-            return fetchWithRetry(url, config, retryCount + 1);
+            await sleep(RETRY_DELAY * Math.pow(2, retryCount));
+            return fetchWithRetry(url, config, retryCount + 1, maxRetries);
         }
 
+        error.isNSEUpstreamError = true;
+        error.upstreamStatus = status;
         throw error;
     }
 }
 
-/* ===== Exports ===== */
 module.exports = { nseGet, refreshCookies, ensureCookies };

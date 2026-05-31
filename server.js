@@ -31,6 +31,8 @@ const allowedOrigins = [
 if (process.env.NODE_ENV === 'development') {
   allowedOrigins.push("http://localhost:3000");
   allowedOrigins.push("http://localhost:5173");
+  allowedOrigins.push("http://localhost:3001");
+
 }
 
 app.use(
@@ -142,6 +144,7 @@ app.use("/api/job", formLimiter, require("./routes/jobApplication.routes"));
 app.use("/api", require("./routes/adminAuth.routes"));
 app.use("/api/leads/activity", require("./routes/activity.routes"));
 app.use("/api/blog", require("./routes/blog.routes"));
+app.use("/api/blogs", require("./routes/blogLike.routes"));
 app.use("/api/documents", require("./routes/document.routes"));
 app.use("/api/mail", require("./routes/mail.routes"));
 

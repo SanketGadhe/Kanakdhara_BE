@@ -1,142 +1,233 @@
 const { nseGet } = require("../services/nseClient");
 
-/* ---------------- Cache ---------------- */
-
 let cachedResponse = null;
 let lastFetched = 0;
-const CACHE_TTL = 60 * 1000; // 1 minute
+const CACHE_TTL = 60 * 1000;
 
-/* ---------------- Helpers ---------------- */
+const INDEX_LIST = [
+    "NIFTY 50",
+    "NIFTY NEXT 50",
+    "NIFTY 100",
+    "NIFTY MIDCAP 250",
+    "NIFTY SMALLCAP 250",
+    "NIFTY MICROCAP 250",
+    "NIFTY 500",
+    "NIFTY MID SMALLCAP 400",
+    "NIFTY BANK",
+    "NIFTY IT",
+    "NIFTY FMCG",
+    "NIFTY AUTO",
+    "NIFTY PHARMA",
+    "NIFTY REALTY",
+    "NIFTY METAL",
+    "NIFTY ENERGY",
+    "NIFTY PSU BANK",
+    "NIFTY MEDIA",
+    "NIFTY PRIVATE BANK",
+    "NIFTY CONSUMPTION",
+    "NIFTY INFRASTRUCTURE",
+    "NIFTY COMMODITIES",
+];
+
+const toNumber = (value, fallback = null) => {
+    const normalized =
+        typeof value === "string" ? value.replace(/,/g, "") : value;
+    const number = Number(normalized);
+    return Number.isFinite(number) ? number : fallback;
+};
+
+const roundNumber = (value, decimals = 2) => {
+    const number = toNumber(value);
+    return number === null ? null : Number(number.toFixed(decimals));
+};
 
 const calcChangePercent = (last, prev) => {
-    if (!prev || prev === 0) return 0;
+    if (!Number.isFinite(last) || !Number.isFinite(prev) || prev === 0) {
+        return null;
+    }
+
     return ((last - prev) / prev) * 100;
 };
 
-/* ---------------- Controller ---------------- */
+const getStatusCode = (error) => error.response?.status || error.upstreamStatus;
+
+async function fetchMarketStatus() {
+    try {
+        return await nseGet("/api/marketStatus", { nseMaxRetries: 1 });
+    } catch (error) {
+        console.warn("NSE marketStatus unavailable:", {
+            message: error.message,
+            status: getStatusCode(error),
+        });
+        return null;
+    }
+}
+
+async function fetchNifty50Stocks() {
+    try {
+        const res = await nseGet("/api/equity-stockIndices", {
+            params: { index: "NIFTY 50" },
+            timeout: 8000,
+            nseMaxRetries: 0,
+        });
+
+        return {
+            status: "live",
+            stocks: Array.isArray(res.data?.data) ? res.data.data : [],
+            advance: res.data?.advance || null,
+        };
+    } catch (error) {
+        console.warn("NSE NIFTY 50 stock list unavailable:", {
+            message: error.message,
+            status: getStatusCode(error),
+        });
+
+        return {
+            status: "unavailable",
+            stocks: [],
+            advance: null,
+            errorStatus: getStatusCode(error) || null,
+        };
+    }
+}
+
+function buildAdvanceDecline(indexSnapshot) {
+    if (!indexSnapshot) return {};
+
+    return {
+        advances: toNumber(indexSnapshot.advances, 0),
+        declines: toNumber(indexSnapshot.declines, 0),
+        unchanged: toNumber(indexSnapshot.unchanged, 0),
+    };
+}
+
+function buildStaleResponse() {
+    if (!cachedResponse) return null;
+
+    return {
+        ...cachedResponse,
+        isStale: true,
+        dataQuality: "stale",
+        timestamp: Date.now(),
+        upstream: {
+            ...cachedResponse.upstream,
+            indices: "stale-cache",
+        },
+    };
+}
 
 const getMarketTicker = async (req, res) => {
     try {
-        /* ---------- Serve cache ---------- */
         if (cachedResponse && Date.now() - lastFetched < CACHE_TTL) {
             return res.json(cachedResponse);
         }
 
-        /* ---------- API calls (nseClient handles cookies + retry) ---------- */
-        const [
-            allIndicesRes,
-            marketStatusRes,
-            nifty50StocksRes
-        ] = await Promise.all([
+        const [allIndicesRes, marketStatusRes, stockResult] = await Promise.all([
             nseGet("/api/allIndices"),
-            nseGet("/api/marketStatus"),
-            nseGet("/api/equity-stockIndices", {
-                params: { index: "NIFTY 50" },
-            }),
+            fetchMarketStatus(),
+            fetchNifty50Stocks(),
         ]);
 
-        /* ---------- Market status ---------- */
+        const allIndices = Array.isArray(allIndicesRes.data?.data)
+            ? allIndicesRes.data.data
+            : [];
+
+        if (!allIndices.length) {
+            throw new Error("NSE allIndices returned no index data");
+        }
+
         const marketState =
-            marketStatusRes.data?.marketState?.[0] || {};
+            marketStatusRes?.data?.marketState?.find(
+                (state) => state.index === "NIFTY 50"
+            ) ||
+            marketStatusRes?.data?.marketState?.[0] ||
+            {};
         const marketStatus = marketState.marketStatus || "UNKNOWN";
 
-        /* ---------- Build index map ---------- */
         const indicesMap = {};
-        allIndicesRes.data?.data?.forEach((i) => {
-            indicesMap[i.index] = i;
+        allIndices.forEach((index) => {
+            indicesMap[index.index] = index;
         });
 
-        /* ---------- Indices you want ---------- */
-        const INDEX_LIST = [
-            "NIFTY 50",
-            "NIFTY NEXT 50",
-            "NIFTY 100",
-            "NIFTY MIDCAP 250",
-            "NIFTY SMALLCAP 250",
-            "NIFTY MICROCAP 250",
-            "NIFTY 500",
-            "NIFTY MID SMALLCAP 400",
-            "NIFTY BANK",
-            "NIFTY IT",
-            "NIFTY FMCG",
-            "NIFTY AUTO",
-            "NIFTY PHARMA",
-            "NIFTY REALTY",
-            "NIFTY METAL",
-            "NIFTY ENERGY",
-            "NIFTY PSU BANK",
-            "NIFTY MEDIA",
-            "NIFTY PRIVATE BANK",
-            "NIFTY CONSUMPTION",
-            "NIFTY INFRASTRUCTURE",
-            "NIFTY COMMODITIES",
-        ];
-
-        /* ---------- Normalize indices ---------- */
         const indices = INDEX_LIST.map((key) => {
-            const i = indicesMap[key];
-            if (!i) return null;
+            const index = indicesMap[key];
+            if (!index) return null;
 
-            const last = Number(i.last);
-            const prev = Number(i.previousClose);
-            const perChange30d = Number(i.perChange30d);
-            const perChange365d = Number(i.perChange365d)
+            const last = toNumber(index.last);
+            const prev = toNumber(index.previousClose);
+            const changePercent = calcChangePercent(last, prev);
+
             return {
                 id: key,
                 symbol: key,
-                name: i.index,
+                name: index.index,
                 price: last,
-                changeValue: Number((last - prev).toFixed(2)),
-                changePercent: Number(
-                    calcChangePercent(last, prev).toFixed(2)
-                ),
+                changeValue:
+                    last === null || prev === null
+                        ? null
+                        : roundNumber(last - prev),
+                changePercent: roundNumber(changePercent),
                 category: "INDEX",
                 isLive: marketStatus === "Open",
                 range52: {
-                    high: Number(i.yearHigh),
-                    low: Number(i.yearLow),
+                    high: toNumber(index.yearHigh),
+                    low: toNumber(index.yearLow),
                 },
-                perChange30d: Number(perChange30d.toFixed(2)),
-                perChange365d: Number(perChange365d.toFixed(2)),
+                perChange30d: roundNumber(index.perChange30d),
+                perChange365d: roundNumber(index.perChange365d),
                 timestamp: Date.now(),
             };
         }).filter(Boolean);
 
-        /* ---------- STOCKS (EXACT NSE FORMAT) ---------- */
-        const stocks = nifty50StocksRes.data?.data || [];
+        const niftyAdvance =
+            stockResult.advance || buildAdvanceDecline(indicesMap["NIFTY 50"]);
 
-        /* ---------- Advance / Decline ---------- */
-        const advanceDecline = {
-            "NIFTY 50": nifty50StocksRes.data?.advance || {},
-        };
-
-        /* ---------- Final response ---------- */
         const response = {
             marketStatus,
             indices,
-            stocks, // 👈 RELIANCE, TCS, INFY, etc. (FULL OBJECT)
-            advanceDecline,
+            stocks: stockResult.stocks,
+            advanceDecline: {
+                "NIFTY 50": niftyAdvance,
+            },
             timestamp: Date.now(),
+            dataQuality: stockResult.status === "live" ? "live" : "partial",
+            upstream: {
+                indices: "live",
+                marketStatus: marketStatusRes ? "live" : "unavailable",
+                stocks: stockResult.status,
+                stockErrorStatus: stockResult.errorStatus,
+            },
         };
 
-        /* ---------- Cache ---------- */
         cachedResponse = response;
         lastFetched = Date.now();
 
-        res.json(response);
+        return res.json(response);
     } catch (error) {
         console.error("NSE Controller Error:", {
             message: error.message,
-            status: error.response?.status,
+            status: getStatusCode(error),
             statusText: error.response?.statusText,
         });
 
-        res.status(500).json({
-            error: "Failed to fetch NSE market data",
-            details: process.env.NODE_ENV === 'development' ? {
-                message: error.message,
-                status: error.response?.status,
-            } : undefined,
+        const staleResponse = buildStaleResponse();
+        if (staleResponse) {
+            return res.json(staleResponse);
+        }
+
+        return res.status(503).json({
+            marketStatus: "UNAVAILABLE",
+            indices: [],
+            stocks: [],
+            advanceDecline: {},
+            timestamp: Date.now(),
+            dataQuality: "unavailable",
+            upstream: {
+                indices: "unavailable",
+                marketStatus: "unavailable",
+                stocks: "unavailable",
+            },
+            error: "Market data temporarily unavailable",
         });
     }
 };

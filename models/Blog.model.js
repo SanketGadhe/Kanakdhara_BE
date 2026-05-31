@@ -1,5 +1,8 @@
 const mongoose = require("mongoose");
 
+const DEFAULT_BLOG_TAGLINE =
+    "Founder & CEO at Kanakdhara Investments. Passionate about simplifying wealth creation for Indian families.";
+
 const blogSchema = new mongoose.Schema(
     {
         title: {
@@ -29,6 +32,12 @@ const blogSchema = new mongoose.Schema(
             required: true,
         },
 
+        tagline: {
+            type: String,
+            trim: true,
+            default: DEFAULT_BLOG_TAGLINE,
+        },
+
         date: {
             type: String, // keeping string as per FE usage (Dec 22, 2025)
             required: true,
@@ -46,5 +55,7 @@ const blogSchema = new mongoose.Schema(
     },
     { timestamps: true }
 );
+
+blogSchema.statics.defaultTagline = DEFAULT_BLOG_TAGLINE;
 
 module.exports = mongoose.model("Blog", blogSchema);
