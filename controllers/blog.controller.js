@@ -1,4 +1,5 @@
 const Blog = require("../models/Blog.model");
+const BlogLike = require("../models/BlogLike.model");
 
 const normalizeTagline = (tagline) => {
     if (typeof tagline !== "string" || !tagline.trim()) {
@@ -15,6 +16,43 @@ const serializeBlog = (blog) => {
         ...data,
         tagline: normalizeTagline(data.tagline),
     };
+};
+
+const attachLikeCounts = async (blogs) => {
+    const blogIds = blogs.map((blog) => blog._id);
+
+    if (!blogIds.length) {
+        return [];
+    }
+
+    const likeCounts = await BlogLike.aggregate([
+        {
+            $match: {
+                blogId: { $in: blogIds },
+            },
+        },
+        {
+            $group: {
+                _id: "$blogId",
+                count: { $sum: 1 },
+            },
+        },
+    ]);
+
+    const countByBlogId = new Map(
+        likeCounts.map((item) => [String(item._id), item.count])
+    );
+
+    return blogs.map((blog) => {
+        const serializedBlog = serializeBlog(blog);
+        const likeCount = countByBlogId.get(String(blog._id)) || 0;
+
+        return {
+            ...serializedBlog,
+            likeCount,
+            likes: likeCount,
+        };
+    });
 };
 
 /**
@@ -124,7 +162,9 @@ exports.getAllBlogs = async (req, res) => {
         .select("-htmlContent")
         .sort({ createdAt: -1 });
 
-    res.status(200).json({ data: blogs.map(serializeBlog) });
+    const blogsWithLikeCounts = await attachLikeCounts(blogs);
+
+    res.status(200).json({ data: blogsWithLikeCounts });
 };
 
 /**
