@@ -3,9 +3,7 @@ const { getAllIndicesData } = require("../services/nse.service");
 
 let cachedResponse = null;
 let lastFetched = 0;
-let refreshPromise = null;
 const CACHE_TTL = 60 * 1000;
-const MARKET_TICKER_TIMEOUT_MS = 12000;
 
 const INDEX_LIST = [
     "NIFTY 50",
@@ -56,10 +54,7 @@ const getStatusCode = (error) => error.response?.status || error.upstreamStatus;
 
 async function fetchMarketStatus() {
     try {
-        return await nseGet("/api/marketStatus", {
-            timeout: 6000,
-            nseMaxRetries: 1,
-        });
+        return await nseGet("/api/marketStatus", { nseMaxRetries: 1 });
     } catch (error) {
         console.warn("NSE marketStatus unavailable:", {
             message: error.message,
@@ -122,131 +117,87 @@ function buildStaleResponse() {
     };
 }
 
-function withTimeout(promise, timeoutMs, message) {
-    return new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-            const error = new Error(message);
-            error.isTimeout = true;
-            reject(error);
-        }, timeoutMs);
-
-        promise.then(
-            (value) => {
-                clearTimeout(timeout);
-                resolve(value);
-            },
-            (error) => {
-                clearTimeout(timeout);
-                reject(error);
-            },
-        );
-    });
-}
-
-function cacheMarketTickerResponse(response) {
-    cachedResponse = response;
-    lastFetched = Date.now();
-    return response;
-}
-
-async function buildFreshMarketTickerResponse() {
-    const [allIndices, marketStatusRes, stockResult] = await Promise.all([
-        getAllIndicesData(),
-        fetchMarketStatus(),
-        fetchNifty50Stocks(),
-    ]);
-
-    if (!allIndices.length) {
-        throw new Error("NSE allIndices returned no index data");
-    }
-
-    const marketState =
-        marketStatusRes?.data?.marketState?.find(
-            (state) => state.index === "NIFTY 50",
-        ) ||
-        marketStatusRes?.data?.marketState?.[0] ||
-        {};
-    const marketStatus = marketState.marketStatus || "UNKNOWN";
-
-    const indicesMap = {};
-    allIndices.forEach((index) => {
-        indicesMap[index.index] = index;
-    });
-
-    const indices = INDEX_LIST.map((key) => {
-        const index = indicesMap[key];
-        if (!index) return null;
-
-        const last = toNumber(index.last);
-        const prev = toNumber(index.previousClose);
-        const changePercent = calcChangePercent(last, prev);
-
-        return {
-            id: key,
-            symbol: key,
-            name: index.index,
-            price: last,
-            changeValue:
-                last === null || prev === null
-                    ? null
-                    : roundNumber(last - prev),
-            changePercent: roundNumber(changePercent),
-            category: "INDEX",
-            isLive: marketStatus === "Open",
-            range52: {
-                high: toNumber(index.yearHigh),
-                low: toNumber(index.yearLow),
-            },
-            perChange30d: roundNumber(index.perChange30d),
-            perChange365d: roundNumber(index.perChange365d),
-            timestamp: Date.now(),
-        };
-    }).filter(Boolean);
-
-    const niftyAdvance =
-        stockResult.advance || buildAdvanceDecline(indicesMap["NIFTY 50"]);
-
-    return {
-        marketStatus,
-        indices,
-        stocks: stockResult.stocks,
-        advanceDecline: {
-            "NIFTY 50": niftyAdvance,
-        },
-        timestamp: Date.now(),
-        dataQuality: stockResult.status === "live" ? "live" : "partial",
-        upstream: {
-            indices: "live",
-            marketStatus: marketStatusRes ? "live" : "unavailable",
-            stocks: stockResult.status,
-            stockErrorStatus: stockResult.errorStatus,
-        },
-    };
-}
-
-function refreshMarketTickerResponse() {
-    if (!refreshPromise) {
-        refreshPromise = buildFreshMarketTickerResponse()
-            .then(cacheMarketTickerResponse)
-            .finally(() => {
-                refreshPromise = null;
-            });
-    }
-
-    return refreshPromise;
-}
-
 const getMarketTicker = async (req, res) => {
     try {
         if (cachedResponse && Date.now() - lastFetched < CACHE_TTL) {
             return res.json(cachedResponse);
         }
 
-        const response = await withTimeout(
-            refreshMarketTickerResponse(),
-            MARKET_TICKER_TIMEOUT_MS,
-            "NSE market ticker refresh timed out",
-        );
+        const [allIndices, marketStatusRes, stockResult] = await Promise.all([
+            getAllIndicesData(),
+            fetchMarketStatus(),
+            fetchNifty50Stocks(),
+        ]);
+
+        if (!allIndices.length) {
+            throw new Error("NSE allIndices returned no index data");
+        }
+
+        const marketState =
+            marketStatusRes?.data?.marketState?.find(
+                (state) => state.index === "NIFTY 50"
+            ) ||
+            marketStatusRes?.data?.marketState?.[0] ||
+            {};
+        const marketStatus = marketState.marketStatus || "UNKNOWN";
+
+        const indicesMap = {};
+        allIndices.forEach((index) => {
+            indicesMap[index.index] = index;
+        });
+
+        const indices = INDEX_LIST.map((key) => {
+            const index = indicesMap[key];
+            if (!index) return null;
+
+            const last = toNumber(index.last);
+            const prev = toNumber(index.previousClose);
+            const changePercent = calcChangePercent(last, prev);
+
+            return {
+                id: key,
+                symbol: key,
+                name: index.index,
+                price: last,
+                changeValue:
+                    last === null || prev === null
+                        ? null
+                        : roundNumber(last - prev),
+                changePercent: roundNumber(changePercent),
+                category: "INDEX",
+                isLive: marketStatus === "Open",
+                range52: {
+                    high: toNumber(index.yearHigh),
+                    low: toNumber(index.yearLow),
+                },
+                perChange30d: roundNumber(index.perChange30d),
+                perChange365d: roundNumber(index.perChange365d),
+                timestamp: Date.now(),
+            };
+        }).filter(Boolean);
+
+        const niftyAdvance =
+            stockResult.advance || buildAdvanceDecline(indicesMap["NIFTY 50"]);
+
+        const response = {
+            marketStatus,
+            indices,
+            stocks: stockResult.stocks,
+            advanceDecline: {
+                "NIFTY 50": niftyAdvance,
+            },
+            timestamp: Date.now(),
+            dataQuality: stockResult.status === "live" ? "live" : "partial",
+            upstream: {
+                indices: "live",
+                marketStatus: marketStatusRes ? "live" : "unavailable",
+                stocks: stockResult.status,
+                stockErrorStatus: stockResult.errorStatus,
+            },
+        };
+
+        cachedResponse = response;
+        lastFetched = Date.now();
 
         return res.json(response);
     } catch (error) {
@@ -254,7 +205,6 @@ const getMarketTicker = async (req, res) => {
             message: error.message,
             status: getStatusCode(error),
             statusText: error.response?.statusText,
-            timedOut: Boolean(error.isTimeout),
         });
 
         const staleResponse = buildStaleResponse();

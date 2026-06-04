@@ -4,10 +4,7 @@ const path = require("path");
 
 const ALL_INDICES_CACHE_TTL = 30 * 1000;
 const DATA_DIR = path.join(__dirname, "../data");
-const ALL_INDICES_CACHE_FILE = path.join(
-    DATA_DIR,
-    "nse-all-indices-cache.json",
-);
+const ALL_INDICES_CACHE_FILE = path.join(DATA_DIR, "nse-all-indices-cache.json");
 
 let allIndicesCache = null;
 let allIndicesFetchedAt = 0;
@@ -52,10 +49,7 @@ async function getAllIndicesData({ force = false } = {}) {
 
 async function fetchAllIndicesData() {
     try {
-        const res = await nseGet("/api/allIndices", {
-            timeout: 8000,
-            nseMaxRetries: 1,
-        });
+        const res = await nseGet("/api/allIndices");
         const data = res.data?.data;
 
         if (!Array.isArray(data)) {
@@ -74,10 +68,7 @@ async function fetchAllIndicesData() {
 
         const diskCache = readAllIndicesCacheFromDisk();
         if (diskCache) {
-            console.warn(
-                "[NSE] Using persisted allIndices cache:",
-                err.message,
-            );
+            console.warn("[NSE] Using persisted allIndices cache:", err.message);
             return diskCache;
         }
 
@@ -108,10 +99,7 @@ function readAllIndicesCacheFromDisk() {
         allIndicesFetchedAt = Number(parsed.fetchedAt) || 0;
         return allIndicesCache;
     } catch (err) {
-        console.warn(
-            "[NSE] Failed to read persisted allIndices cache:",
-            err.message,
-        );
+        console.warn("[NSE] Failed to read persisted allIndices cache:", err.message);
         return null;
     }
 }
@@ -137,7 +125,7 @@ function persistAllIndicesCache(data) {
 
 function findIndexSnapshot(allIndices, indexName) {
     return allIndices.find(
-        (item) => item.index === indexName || item.indexSymbol === indexName,
+        (item) => item.index === indexName || item.indexSymbol === indexName
     );
 }
 
@@ -174,10 +162,7 @@ exports.getIndexSnapshot = async (indexName) => {
  * FII / DII DATA
  */
 exports.getFIIDII = async () => {
-    const res = await nseGet("/api/fiidiiTradeReact", {
-        timeout: 8000,
-        nseMaxRetries: 1,
-    });
+    const res = await nseGet("/api/fiidiiTradeReact");
     const rows = Array.isArray(res.data) ? res.data : [];
 
     const fii = rows.find((d) => d.category === "FII/FPI");
@@ -216,16 +201,13 @@ exports.getVIX = async () => {
 exports.getMarketDirection = async () => {
     const nifty = normalizeIndexSummary(
         await exports.getIndexSnapshot("NIFTY 50"),
-        "NIFTY 50",
+        "NIFTY 50"
     );
 
     try {
-        const res = await nseGet("/api/marketStatus", {
-            timeout: 6000,
-            nseMaxRetries: 1,
-        });
+        const res = await nseGet("/api/marketStatus", { nseMaxRetries: 1 });
         const marketState = res.data?.marketState?.find(
-            (state) => state.index === "NIFTY 50",
+            (state) => state.index === "NIFTY 50"
         );
 
         return {
@@ -234,16 +216,13 @@ exports.getMarketDirection = async () => {
             change: toNumber(marketState?.variation, nifty.change),
             percentChange: toNumber(
                 marketState?.percentChange,
-                nifty.percentChange,
+                nifty.percentChange
             ),
             marketStatus: marketState?.marketStatus || "UNKNOWN",
             tradeDate: marketState?.tradeDate || nifty.tradeDate,
         };
     } catch (err) {
-        console.warn(
-            "[NSE] marketStatus unavailable, using allIndices:",
-            err.message,
-        );
+        console.warn("[NSE] marketStatus unavailable, using allIndices:", err.message);
         return {
             ...nifty,
             marketStatus: "UNKNOWN",

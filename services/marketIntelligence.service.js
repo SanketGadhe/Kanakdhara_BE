@@ -1,12 +1,10 @@
 const {
     getVIX,
     getMarketDirection,
-    getMarketForNifty,
+    getMarketForNifty
 } = require("./nse.service");
 const { getNifty50AdvanceDecline } = require("./marketBreadth.service");
 const { getMMIZone } = require("./mmi.service");
-
-const MARKET_INTELLIGENCE_TIMEOUT_MS = 12000;
 
 function classifyTrend(pChange) {
     if (!Number.isFinite(pChange)) return "Unavailable";
@@ -32,7 +30,11 @@ function interpretBreadth(ratio) {
     return "Bearish";
 }
 
-function calculateSentimentScore({ niftyChange, breadthRatio, vix }) {
+function calculateSentimentScore({
+    niftyChange,
+    breadthRatio,
+    vix
+}) {
     let score = 50;
 
     // Trend contribution
@@ -80,10 +82,7 @@ function getSettledValue(results, index, fallback, label) {
     }
 
     if (result?.status === "rejected") {
-        console.warn(
-            `[Market Intelligence] ${label} unavailable:`,
-            result.reason?.message,
-        );
+        console.warn(`[Market Intelligence] ${label} unavailable:`, result.reason?.message);
     }
 
     return fallback;
@@ -120,10 +119,7 @@ function buildReasonForVIX(vix, risk) {
 const buildMarketIntelligence = async () => {
     try {
         const timeoutPromise = new Promise((resolve) => {
-            setTimeout(
-                () => resolve({ timedOut: true }),
-                MARKET_INTELLIGENCE_TIMEOUT_MS,
-            );
+            setTimeout(() => resolve({ timedOut: true }), 20000);
         });
 
         const marketDataPromise = Promise.allSettled([
@@ -132,15 +128,13 @@ const buildMarketIntelligence = async () => {
             getMarketForNifty("NIFTY 500"),
             getMarketForNifty("NIFTY BANK"),
             getMarketForNifty("NIFTY IT"),
-            getNifty50AdvanceDecline(),
+            getNifty50AdvanceDecline()
         ]);
 
         const results = await Promise.race([marketDataPromise, timeoutPromise]);
 
         if (results.timedOut) {
-            console.warn(
-                "[Market Intelligence] Timed out while fetching market data",
-            );
+            console.warn("[Market Intelligence] Timed out while fetching market data");
         }
 
         const settledResults = Array.isArray(results) ? results : [];
@@ -149,31 +143,31 @@ const buildMarketIntelligence = async () => {
             settledResults,
             1,
             createUnavailableIndexSummary("NIFTY 50"),
-            "NIFTY 50",
+            "NIFTY 50"
         );
         const nifty_500_summary = getSettledValue(
             settledResults,
             2,
             createUnavailableIndexSummary("NIFTY 500"),
-            "NIFTY 500",
+            "NIFTY 500"
         );
         const nifty_bank_summary = getSettledValue(
             settledResults,
             3,
             createUnavailableIndexSummary("NIFTY BANK"),
-            "NIFTY BANK",
+            "NIFTY BANK"
         );
         const niftyIT = getSettledValue(
             settledResults,
             4,
             createUnavailableIndexSummary("NIFTY IT"),
-            "NIFTY IT",
+            "NIFTY IT"
         );
         const breadth = getSettledValue(
             settledResults,
             5,
             UNAVAILABLE_BREADTH,
-            "NIFTY 50 breadth",
+            "NIFTY 50 breadth"
         );
 
         const sentimentScore = calculateSentimentScore({
@@ -206,7 +200,7 @@ const buildMarketIntelligence = async () => {
                 },
                 nifty_500_summary: nifty_500_summary,
                 nifty_bank_summary: nifty_bank_summary,
-                nifty_it_summary: niftyIT,
+                nifty_it_summary: niftyIT
             },
 
             market_mood_indicator: {
@@ -241,6 +235,7 @@ const buildMarketIntelligence = async () => {
                         value: vix,
                         reason: buildReasonForVIX(vix, vixInsight.risk),
                     },
+
                 },
 
                 investment_action:
@@ -250,7 +245,7 @@ const buildMarketIntelligence = async () => {
             },
         };
     } catch (error) {
-        console.error("Market intelligence service error:", error);
+        console.error('Market intelligence service error:', error);
         throw error;
     }
 };

@@ -99,6 +99,10 @@ app.use(
   "/uploads",
   express.static(path.join(__dirname, "uploads"))
 );
+app.use(
+  "/upload",
+  express.static(path.join(__dirname, "uploads"))
+);
 
 /* ======================
    DATABASE

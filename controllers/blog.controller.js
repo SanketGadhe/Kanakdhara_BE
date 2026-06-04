@@ -10,11 +10,42 @@ const normalizeTagline = (tagline) => {
     return tagline.trim();
 };
 
+const normalizeImagePath = (image) => {
+    if (typeof image !== "string" || !image.trim()) {
+        return image;
+    }
+
+    const trimmedImage = image.trim().replace(/\\/g, "/");
+
+    if (/^(https?:)?\/\//i.test(trimmedImage) || trimmedImage.startsWith("data:")) {
+        return trimmedImage;
+    }
+
+    if (trimmedImage.startsWith("/uploads/")) {
+        return trimmedImage;
+    }
+
+    if (trimmedImage.startsWith("uploads/")) {
+        return `/${trimmedImage}`;
+    }
+
+    if (trimmedImage.startsWith("/upload/")) {
+        return trimmedImage.replace(/^\/upload\//, "/uploads/");
+    }
+
+    if (trimmedImage.startsWith("upload/")) {
+        return `/${trimmedImage.replace(/^upload\//, "uploads/")}`;
+    }
+
+    return `/uploads/blogs/${trimmedImage.replace(/^\/+/, "")}`;
+};
+
 const serializeBlog = (blog) => {
     const data = typeof blog.toObject === "function" ? blog.toObject() : blog;
 
     return {
         ...data,
+        image: normalizeImagePath(data.image),
         tagline: normalizeTagline(data.tagline),
     };
 };

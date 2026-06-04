@@ -12,8 +12,6 @@ const NSE_BASE = "https://www.nseindia.com";
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1500;
 const COOKIE_REFRESH_INTERVAL = 4 * 60 * 1000;
-const WARMUP_TIMEOUT = 5000;
-const DEFAULT_TIMEOUT = 10000;
 const REQUEST_THROTTLE_MS = 300;
 const WARMUP_PATHS = [
     "/market-data/live-equity-market?symbol=NIFTY%2050",
@@ -33,7 +31,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const nseAxios = axios.create({
     baseURL: NSE_BASE,
-    timeout: DEFAULT_TIMEOUT,
+    timeout: 15000,
     headers: {
         "User-Agent":
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
@@ -55,7 +53,6 @@ async function refreshCookies() {
         for (const path of WARMUP_PATHS) {
             try {
                 const response = await nseAxios.get(path, {
-                    timeout: WARMUP_TIMEOUT,
                     headers: {
                         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
                         Referer: "https://www.google.com/",
@@ -69,23 +66,16 @@ async function refreshCookies() {
 
                 const setCookieHeaders = response.headers["set-cookie"];
                 if (!setCookieHeaders || setCookieHeaders.length === 0) {
-                    console.warn(
-                        `[NSE] No cookies received from warmup path ${path}`,
-                    );
+                    console.warn(`[NSE] No cookies received from warmup path ${path}`);
                     continue;
                 }
 
-                cookies = setCookieHeaders
-                    .map((c) => c.split(";")[0])
-                    .join("; ");
+                cookies = setCookieHeaders.map((c) => c.split(";")[0]).join("; ");
                 lastCookieRefresh = Date.now();
                 console.log(`[NSE] Cookies refreshed successfully via ${path}`);
                 return;
             } catch (err) {
-                console.warn(
-                    `[NSE] Cookie warmup failed for ${path}:`,
-                    err.message,
-                );
+                console.warn(`[NSE] Cookie warmup failed for ${path}:`, err.message);
             }
         }
 
@@ -108,9 +98,7 @@ async function nseGet(url, config = {}) {
 
     const { nseMaxRetries = MAX_RETRIES, ...axiosConfig } = config;
 
-    return enqueueRequest(() =>
-        fetchWithRetry(url, axiosConfig, 0, nseMaxRetries),
-    );
+    return enqueueRequest(() => fetchWithRetry(url, axiosConfig, 0, nseMaxRetries));
 }
 
 function enqueueRequest(requestFn) {
@@ -155,7 +143,7 @@ async function fetchWithRetry(url, config, retryCount, maxRetries) {
 
         if (shouldRetry) {
             console.warn(
-                `[NSE] ${status || error.code || "network"} on ${url}, retrying (${retryCount + 1}/${maxRetries})...`,
+                `[NSE] ${status || error.code || "network"} on ${url}, retrying (${retryCount + 1}/${maxRetries})...`
             );
 
             if (isSessionRecoverable) {

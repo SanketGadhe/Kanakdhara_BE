@@ -1,8 +1,6 @@
 const {
-    buildMarketIntelligence,
+    buildMarketIntelligence
 } = require("../services/marketIntelligence.service");
-
-const MARKET_INTELLIGENCE_RESPONSE_TIMEOUT_MS = 15000;
 
 exports.getMarketIntelligence = async (req, res) => {
     let timeout;
@@ -13,10 +11,10 @@ exports.getMarketIntelligence = async (req, res) => {
             if (!res.headersSent) {
                 res.status(408).json({
                     success: false,
-                    error: "Request timeout - market data taking too long to fetch",
+                    error: "Request timeout - market data taking too long to fetch"
                 });
             }
-        }, MARKET_INTELLIGENCE_RESPONSE_TIMEOUT_MS);
+        }, 25000);
 
         const data = await buildMarketIntelligence();
 
@@ -26,7 +24,7 @@ exports.getMarketIntelligence = async (req, res) => {
         if (!res.headersSent) {
             res.json({
                 success: true,
-                data,
+                data
             });
         }
     } catch (err) {
@@ -37,10 +35,7 @@ exports.getMarketIntelligence = async (req, res) => {
             res.status(500).json({
                 success: false,
                 error: "Unable to generate market intelligence",
-                message:
-                    process.env.NODE_ENV === "development"
-                        ? err.message
-                        : "Service temporarily unavailable",
+                message: process.env.NODE_ENV === 'development' ? err.message : 'Service temporarily unavailable'
             });
         }
     }
