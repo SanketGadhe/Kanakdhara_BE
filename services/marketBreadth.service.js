@@ -1,25 +1,38 @@
-const { getIndexSnapshot } = require("./nse.service");
-
-const toNumber = (value, fallback = 0) => {
-    const number = Number(value);
-    return Number.isFinite(number) ? number : fallback;
-};
+/**
+ * Fetch NIFTY 50 Advance / Decline from NSE
+ * Source: /api/equity-stockIndices?index=NIFTY 50
+ */
+const { nseGet } = require("./nseClient");
 
 exports.getNifty50AdvanceDecline = async () => {
-    const nifty50 = await getIndexSnapshot("NIFTY 50");
+    const res = await nseGet("/api/equity-stockIndices", {
+        params: { index: "NIFTY 50" },
+    });
 
-    const advances = toNumber(nifty50.advances);
-    const declines = toNumber(nifty50.declines);
-    const unchanged = toNumber(nifty50.unchanged);
-    const ratio =
-        declines > 0 ? Number((advances / declines).toFixed(2)) : null;
+    const adv = res.data?.advance;
 
-    let status = "Unavailable";
-    if (ratio !== null) {
-        status = "Neutral";
-        if (ratio >= 1.5) status = "Bullish";
-        else if (ratio < 1) status = "Bearish";
+    if (!adv) {
+        return {
+            advances: null,
+            declines: null,
+            unchanged: null,
+            ratio: null,
+            status: "Unavailable",
+        };
     }
+
+    const advances = Number(adv.advances || 0);
+    const declines = Number(adv.declines || 0);
+    const unchanged = Number(adv.unchanged || 0);
+
+    const ratio =
+        declines > 0
+            ? Number((advances / declines).toFixed(2))
+            : null;
+
+    let status = "Neutral";
+    if (ratio >= 1.5) status = "Bullish";
+    else if (ratio < 1) status = "Bearish";
 
     return {
         advances,
