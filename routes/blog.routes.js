@@ -7,6 +7,7 @@ const {
     updateBlog,
     getAllBlogs,
     getBlogById,
+    getBlogSharePage,
 } = require("../controllers/blog.controller");
 const { protectAdmin } = require("../middleware/auth.middleware");
 
@@ -28,6 +29,7 @@ router.put(
 
 // Public routes
 router.get("/getAllblogs", getAllBlogs);
+router.get("/share/:id", getBlogSharePage);
 router.get("/getblog/:id", getBlogById);
 
 module.exports = router;

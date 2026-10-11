@@ -32,7 +32,7 @@ const customerInfoSchema = new Monggose.Schema({
             },
             purpose: {
                 type: String,
-                enum: ['report', 'reference', 'goal', 'connect'],
+                enum: ['report', 'reference', 'goal', 'connect', 'risk_assessment', 'financial_health'],
             },
             reference: {
                 ref: "ReportModel",

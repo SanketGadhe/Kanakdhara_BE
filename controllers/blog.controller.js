@@ -10,6 +10,40 @@ const normalizeTagline = (tagline) => {
     return tagline.trim();
 };
 
+const normalizeCategory = (category) => {
+    if (typeof category !== "string") return category;
+    const value = category.trim();
+    return value.toLowerCase() === "mutual funds" ? "Financial Planning" : value;
+};
+
+const escapeHtml = (value) => String(value ?? "").replace(
+    /[&<>"']/g,
+    (character) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+    })[character],
+);
+
+const SITE_ORIGIN = (process.env.PUBLIC_SITE_URL || "https://kanakdharainv.com").replace(/\/$/, "");
+const API_ORIGIN = (process.env.PUBLIC_API_URL || "https://api.kanakdharainv.com").replace(/\/$/, "");
+
+const getAbsoluteBlogImageUrl = (image) => {
+    const normalizedImage = normalizeImagePath(image);
+
+    if (/^https?:\/\//i.test(normalizedImage || "")) return normalizedImage;
+    if (typeof normalizedImage === "string" && normalizedImage.startsWith("//")) {
+        return `https:${normalizedImage}`;
+    }
+    if (typeof normalizedImage === "string" && normalizedImage.startsWith("/")) {
+        return `${API_ORIGIN}${normalizedImage}`;
+    }
+
+    return `${SITE_ORIGIN}/static/logo-2.png`;
+};
+
 const normalizeImagePath = (image) => {
     if (typeof image !== "string" || !image.trim()) {
         return image;
@@ -47,6 +81,7 @@ const serializeBlog = (blog) => {
         ...data,
         image: normalizeImagePath(data.image),
         tagline: normalizeTagline(data.tagline),
+        category: normalizeCategory(data.category),
     };
 };
 
@@ -114,7 +149,7 @@ exports.createBlog = async (req, res) => {
 
         const blog = await Blog.create({
             title,
-            category,
+            category: normalizeCategory(category),
             desc,
             author,
             tagline: normalizeTagline(tagline),
@@ -160,7 +195,7 @@ exports.updateBlog = async (req, res) => {
         } = req.body;
 
         blog.title = title ?? blog.title;
-        blog.category = category ?? blog.category;
+        blog.category = normalizeCategory(category ?? blog.category);
         blog.desc = desc ?? blog.desc;
         blog.author = author ?? blog.author;
         if (tagline !== undefined) {
@@ -228,5 +263,70 @@ exports.getBlogById = async (req, res) => {
         return res.status(500).json({
             error: "Failed to fetch blog",
         });
+    }
+};
+
+/**
+ * GET /blog/share/:id
+ * Server-rendered social metadata for crawlers that do not execute the React app.
+ */
+exports.getBlogSharePage = async (req, res) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).type("html").send("Article not found");
+        }
+
+        const blog = await Blog.findOne({
+            _id: req.params.id,
+            isPublished: true,
+        }).select("title desc image author");
+
+        if (!blog) {
+            return res.status(404).type("html").send("Article not found");
+        }
+
+        const articleUrl = `${SITE_ORIGIN}/blogs/${blog._id}`;
+        const imageUrl = getAbsoluteBlogImageUrl(blog.image);
+        const title = escapeHtml(blog.title);
+        const description = escapeHtml(blog.desc);
+        const author = escapeHtml(blog.author);
+        const safeArticleUrl = escapeHtml(articleUrl);
+        const safeImageUrl = escapeHtml(imageUrl);
+
+        res.set({
+            "Cache-Control": "public, max-age=300",
+            "X-Robots-Tag": "noindex, follow",
+        });
+
+        return res.status(200).type("html").send(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${title} | Kanakdhara Investments</title>
+  <meta name="description" content="${description}">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Kanakdhara Investments">
+  <meta property="og:title" content="${title}">
+  <meta property="og:description" content="${description}">
+  <meta property="og:image" content="${safeImageUrl}">
+  <meta property="og:image:secure_url" content="${safeImageUrl}">
+  <meta property="og:image:alt" content="${title}">
+  <meta property="og:url" content="${safeArticleUrl}">
+  <meta property="article:author" content="${author}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${title}">
+  <meta name="twitter:description" content="${description}">
+  <meta name="twitter:image" content="${safeImageUrl}">
+  <link rel="canonical" href="${safeArticleUrl}">
+</head>
+<body>
+  <p>Opening <a href="${safeArticleUrl}">${title}</a>...</p>
+  <script>window.location.replace(${JSON.stringify(articleUrl).replace(/</g, "\\u003c")});</script>
+</body>
+</html>`);
+    } catch (err) {
+        console.error("Failed to render blog share page:", err);
+        return res.status(500).type("html").send("Unable to load article preview");
     }
 };
