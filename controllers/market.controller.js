@@ -1,48 +1,45 @@
 const {
-    getFIIDII,
-    getVIX,
-    getMarketDirection
-} = require("../services/nse.service");
-
-const {
     calculateMMI,
     getMMIZone,
     getMMISeries
 } = require("../services/mmi.service");
-
-const { getFIISeries } = require("../services/fiiSeries.service");
+const { getMarketDataSnapshot } = require("../services/marketDataSnapshot.service");
 
 /**
  * DASHBOARD API
  */
 exports.getDashboard = async (req, res) => {
     try {
-        const [flow, vix, market] = await Promise.all([
-            getFIIDII(),
-            getVIX(),
-            getMarketDirection()
-        ]);
+        const snapshot = await getMarketDataSnapshot();
+        const { flow, vix, market } = snapshot.dashboard;
+        const fiiNet = flow?.fii?.net ?? 0;
 
         const mmi = calculateMMI({
-            fiiNet: flow.fii.net,
+            fiiNet,
             vix,
             niftyChange: market.percentChange
         });
 
         res.json({
             fiiActivity: {
-                date: flow.date,
-                current: flow.fii.net >= 0 ? "Net Buy" : "Net Sell",
-                value: flow.fii.net
+                date: flow?.date || null,
+                current: flow ? (fiiNet >= 0 ? "Net Buy" : "Net Sell") : "Unavailable",
+                value: flow ? fiiNet : null
             },
             volatility: vix,
             marketDirection:
                 market.percentChange > 0 ? "Positive" : "Negative",
             riskAppetite:
-                vix < 15 && flow.fii.net > 0 ? "High" : "Moderate",
+                vix < 15 && fiiNet > 0 ? "High" : "Moderate",
             mmi: {
                 value: mmi,
                 zone: getMMIZone(mmi)
+            },
+            cache: {
+                dataAsOf: snapshot.fetchedAt,
+                snapshotDate: snapshot.snapshotDate,
+                stale: snapshot.stale,
+                source: snapshot.source
             }
         });
     } catch (err) {
@@ -66,8 +63,17 @@ exports.getMMITrend = (req, res) => {
 exports.getFIISeries = async (req, res) => {
     try {
         const days = Number(req.query.days || 30);
-        const data = await getFIISeries(days);
-        res.json({ data });
+        const snapshot = await getMarketDataSnapshot();
+        const data = (snapshot.fiiSeries || []).slice(-days);
+        res.json({
+            data,
+            cache: {
+                dataAsOf: snapshot.fetchedAt,
+                snapshotDate: snapshot.snapshotDate,
+                stale: snapshot.stale,
+                source: snapshot.source
+            }
+        });
     } catch (e) {
         console.error("FII series failed:", e);
         res.status(500).json({ error: "FII series failed" });

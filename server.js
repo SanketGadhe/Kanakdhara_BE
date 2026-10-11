@@ -107,7 +107,10 @@ app.use(
 /* ======================
    DATABASE
 ====================== */
-connectDB();
+connectDB().then(() => {
+  const { scheduleDailyMarketDataRefresh } = require("./services/scheduler.service");
+  scheduleDailyMarketDataRefresh();
+});
 
 /* ======================
    HEALTH CHECK (before routes so it's always reachable)

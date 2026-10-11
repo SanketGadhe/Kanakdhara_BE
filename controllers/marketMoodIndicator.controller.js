@@ -1,13 +1,14 @@
 const MarketMoodIndicator = require('../models/MarketMoodIndicator');
 const { buildMarketIntelligence } = require('../services/marketIntelligence.service');
+const { getIndiaDateKey } = require('../services/marketDataSnapshot.service');
 
-exports.storeDailyMarketMood = async () => {
+exports.storeDailyMarketMood = async ({ replaceExisting = false } = {}) => {
     try {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = getIndiaDateKey();
 
         // Check if today's data already exists
         const existing = await MarketMoodIndicator.findOne({ date: today });
-        if (existing) {
+        if (existing && !replaceExisting) {
             return existing;
         }
 
@@ -15,10 +16,15 @@ exports.storeDailyMarketMood = async () => {
         const marketData = await buildMarketIntelligence();
         const moodData = marketData.market_mood_indicator;
         const niftyData = marketData.api_source_data.nifty_50_summary;
+        const recordDate = marketData.cache?.snapshotDate || today;
 
-        // Store in database
-        const newRecord = new MarketMoodIndicator({
-            date: today,
+        const snapshotRecord = await MarketMoodIndicator.findOne({ date: recordDate });
+        if (snapshotRecord && !replaceExisting) {
+            return snapshotRecord;
+        }
+
+        const record = {
+            date: recordDate,
             sentiment_score: moodData.sentiment_score,
             sentiment_label: moodData.sentiment_label,
             risk_level: moodData.risk_level,
@@ -28,10 +34,13 @@ exports.storeDailyMarketMood = async () => {
             vix_value: moodData.analysis_factors.volatility_vix.value,
             breadth_ratio: niftyData.market_breadth.ratio,
             trend_strength: moodData.analysis_factors.trend_strength.status
-        });
+        };
 
-        await newRecord.save();
-        return newRecord;
+        return MarketMoodIndicator.findOneAndUpdate(
+            { date: recordDate },
+            record,
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
     } catch (error) {
         console.error('Error storing daily market mood:', error);
         throw error;
@@ -75,9 +84,10 @@ exports.getMarketMoodHistory = async (req, res) => {
 };
 
 exports.getTodayMarketMood = async (req, res) => {
+    let timeout;
     try {
         // Set response timeout to prevent SIGTERM
-        const timeout = setTimeout(() => {
+        timeout = setTimeout(() => {
             if (!res.headersSent) {
                 res.status(408).json({
                     success: false,
@@ -86,7 +96,7 @@ exports.getTodayMarketMood = async (req, res) => {
             }
         }, 25000); // 25 second timeout
 
-        const today = new Date().toISOString().slice(0, 10);
+        const today = getIndiaDateKey();
 
         // Check if today's date data exists in history
         let todayData = await MarketMoodIndicator.findOne({ date: today });
@@ -100,10 +110,12 @@ exports.getTodayMarketMood = async (req, res) => {
         if (!res.headersSent) {
             res.json({
                 success: true,
-                data: todayData
+                data: todayData,
+                stale: todayData?.date !== today
             });
         }
     } catch (error) {
+        clearTimeout(timeout);
         console.error('Error fetching today market mood:', error);
         if (!res.headersSent) {
             res.status(500).json({

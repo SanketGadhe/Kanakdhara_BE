@@ -1,131 +1,24 @@
-const { nseGet } = require("../services/nseClient");
-
-/* ---------------- Helpers ---------------- */
-
-const calcChangePercent = (last, prev) => {
-    if (!prev || prev === 0) return 0;
-    return ((last - prev) / prev) * 100;
-};
-
-/* ---------------- Controller ---------------- */
+const { getMarketDataSnapshot } = require("../services/marketDataSnapshot.service");
 
 const getMarketTicker = async (req, res) => {
     try {
-        /* ---------- API calls (nseClient handles cookies + retry) ---------- */
-        const [
-            allIndicesRes,
-            marketStatusRes,
-            nifty50StocksRes
-        ] = await Promise.all([
-            nseGet("/api/allIndices"),
-            nseGet("/api/marketStatus"),
-            nseGet("/api/equity-stockIndices", {
-                params: { index: "NIFTY 50" },
-            }),
-        ]);
+        const snapshot = await getMarketDataSnapshot();
 
-        /* ---------- Market status ---------- */
-        const marketState =
-            marketStatusRes.data?.marketState?.[0] || {};
-        const marketStatus = marketState.marketStatus || "UNKNOWN";
-
-        /* ---------- Build index map ---------- */
-        const indicesMap = {};
-        allIndicesRes.data?.data?.forEach((i) => {
-            indicesMap[i.index] = i;
+        res.set("Cache-Control", "public, max-age=300, stale-if-error=86400");
+        return res.json({
+            ...snapshot.ticker,
+            dataAsOf: snapshot.fetchedAt,
+            snapshotDate: snapshot.snapshotDate,
+            stale: snapshot.stale,
+            source: snapshot.source,
         });
-
-        /* ---------- Indices you want ---------- */
-        const INDEX_LIST = [
-            "NIFTY 50",
-            "NIFTY NEXT 50",
-            "NIFTY 100",
-            "NIFTY MIDCAP 250",
-            "NIFTY SMALLCAP 250",
-            "NIFTY MICROCAP 250",
-            "NIFTY 500",
-            "NIFTY MID SMALLCAP 400",
-            "NIFTY BANK",
-            "NIFTY IT",
-            "NIFTY FMCG",
-            "NIFTY AUTO",
-            "NIFTY PHARMA",
-            "NIFTY REALTY",
-            "NIFTY METAL",
-            "NIFTY ENERGY",
-            "NIFTY PSU BANK",
-            "NIFTY MEDIA",
-            "NIFTY PRIVATE BANK",
-            "NIFTY CONSUMPTION",
-            "NIFTY INFRASTRUCTURE",
-            "NIFTY COMMODITIES",
-        ];
-
-        /* ---------- Normalize indices ---------- */
-        const indices = INDEX_LIST.map((key) => {
-            const i = indicesMap[key];
-            if (!i) return null;
-
-            const last = Number(i.last);
-            const prev = Number(i.previousClose);
-            const perChange30d = Number(i.perChange30d);
-            const perChange365d = Number(i.perChange365d)
-            return {
-                id: key,
-                symbol: key,
-                name: i.index,
-                price: last,
-                changeValue: Number((last - prev).toFixed(2)),
-                changePercent: Number(
-                    calcChangePercent(last, prev).toFixed(2)
-                ),
-                category: "INDEX",
-                isLive: marketStatus === "Open",
-                range52: {
-                    high: Number(i.yearHigh),
-                    low: Number(i.yearLow),
-                },
-                perChange30d: Number(perChange30d.toFixed(2)),
-                perChange365d: Number(perChange365d.toFixed(2)),
-                timestamp: Date.now(),
-            };
-        }).filter(Boolean);
-
-        /* ---------- STOCKS (EXACT NSE FORMAT) ---------- */
-        const stocks = nifty50StocksRes.data?.data || [];
-
-        /* ---------- Advance / Decline ---------- */
-        const advanceDecline = {
-            "NIFTY 50": nifty50StocksRes.data?.advance || {},
-        };
-
-        /* ---------- Final response ---------- */
-        const response = {
-            marketStatus,
-            indices,
-            stocks, // 👈 RELIANCE, TCS, INFY, etc. (FULL OBJECT)
-            advanceDecline,
-            timestamp: Date.now(),
-        };
-
-        res.json(response);
     } catch (error) {
-        console.error("NSE Controller Error:", {
-            message: error.message,
-            status: error.response?.status,
-            statusText: error.response?.statusText,
-        });
-
-        res.status(500).json({
-            error: "Failed to fetch NSE market data",
-            details: process.env.NODE_ENV === 'development' ? {
-                message: error.message,
-                status: error.response?.status,
-            } : undefined,
+        console.error("Market ticker failed with no cached snapshot:", error.message);
+        return res.status(503).json({
+            error: "Market data is temporarily unavailable",
+            retryAfterSeconds: 900,
         });
     }
 };
 
-module.exports = {
-    getMarketTicker,
-};
+module.exports = { getMarketTicker };

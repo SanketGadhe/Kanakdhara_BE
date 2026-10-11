@@ -68,3 +68,5 @@ build/
 # Temporary files
 tmp/
 temp/
+#Uploads 
+uploads/

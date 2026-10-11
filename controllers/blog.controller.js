@@ -13,7 +13,13 @@ const normalizeTagline = (tagline) => {
 const normalizeCategory = (category) => {
     if (typeof category !== "string") return category;
     const value = category.trim();
-    return value.toLowerCase() === "mutual funds" ? "Financial Planning" : value;
+    const legacyTaxCategories = new Set([
+        "tax",
+        "tax & compliance",
+        "tax & compilance",
+    ]);
+
+    return legacyTaxCategories.has(value.toLowerCase()) ? "Mutual Funds" : value;
 };
 
 const escapeHtml = (value) => String(value ?? "").replace(

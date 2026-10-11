@@ -22,6 +22,7 @@ const REQUEST_THROTTLE_MS = 300; // Min gap between requests
 /* ===== State ===== */
 let cookies = "";
 let lastCookieRefresh = 0;
+let lastCookieAttempt = 0;
 let lastRequestTime = 0;
 let cookieRefreshPromise = null;
 
@@ -56,6 +57,7 @@ async function refreshCookies() {
     }
 
     cookieRefreshPromise = (async () => {
+        lastCookieAttempt = Date.now();
         try {
             const response = await nseAxios.get("/", {
                 headers: {
@@ -91,7 +93,8 @@ async function refreshCookies() {
  * Ensure we have valid cookies (refresh if stale or missing)
  */
 async function ensureCookies() {
-    if (!cookies || Date.now() - lastCookieRefresh > COOKIE_REFRESH_INTERVAL) {
+    const lastCookieActivity = cookies ? lastCookieRefresh : lastCookieAttempt;
+    if (Date.now() - lastCookieActivity > COOKIE_REFRESH_INTERVAL) {
         await refreshCookies();
     }
 }
@@ -144,6 +147,7 @@ async function fetchWithRetry(url, config, retryCount) {
             // Force cookie refresh on 403
             cookies = "";
             lastCookieRefresh = 0;
+            lastCookieAttempt = 0;
             await refreshCookies();
 
             const delay = RETRY_DELAY * Math.pow(2, retryCount);
