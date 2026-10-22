@@ -181,6 +181,13 @@ app.use((err, req, res, next) => {
     return next(err);
   }
 
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({
+      success: false,
+      message: 'Blog image must be 5 MB or smaller.'
+    });
+  }
+
   res.status(err.status || 500).json({
     success: false,
     message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'

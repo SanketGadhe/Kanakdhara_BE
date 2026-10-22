@@ -72,6 +72,22 @@ PDFSHIFT_API_KEY=your_pdfshift_api_key
    - Set up SSL certificates
    - Configure reverse proxy
 
+   The API accepts blog images up to 5 MB. If Nginx proxies the API, its
+   request-body limit must be slightly larger than that to allow for multipart
+   form overhead. Add this inside the `server` block for
+   `api.kanakdharainv.com`:
+
+   ```nginx
+   client_max_body_size 6m;
+   ```
+
+   Then validate and reload Nginx:
+
+   ```bash
+   sudo nginx -t
+   sudo systemctl reload nginx
+   ```
+
 5. **Start Application**
    ```bash
    npm start
